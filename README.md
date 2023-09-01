@@ -106,11 +106,7 @@
           O sistema esta estruturado da seguinte forma:
         </p>
         <ul>
-          <li>main.py (Arquivo para execução via cmd)</li>
-          <li>defines.py (Arquivo contendo o SQL para consulta e inserção de dados da coleta de notícias)</li>
-          <li>imagens_coletor (Pasta raiz) (Pasta que será criada automaticamente para conter as imagens das noticias coletadas)</li>
-          <li>classes/noticia.py (Classe para manipulação de dados das noticias coletadas)</li>
-          <li>classes/coleta.py (Classe que contém os metódos para execução do programa)</li>
+          <li>POR FAZER....</li>
         </ul>
       </div>
       <div id="execucao_via_site">
@@ -119,6 +115,7 @@
           <li>1. pip install -r requirements.txt</li>
           <li>2. py manage.py migrate</li>
           <li>3. py manage.py createsuperuser</li>
+          <li>4. Executar o arquivo script.sql</li>
         </ul>
       </div>
     </div>

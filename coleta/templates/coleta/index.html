@@ -1,226 +1,41 @@
-<html>
-  <head>
-    <title>Página Inicial</title>
+{% extends "coleta/template.html" %}
+{% load static %}
 
-    <style>
-      html, body {
-        width: 100%;
-        height: 100%;
-        background-color: rgba(243, 239, 239, 0.863);
-        margin: 0;
-        font-family: "Raleway", sans-serif;
-      }
-      .wrapper {
-        padding: 10px;
-        display: grid;
-        justify-content: center;
-        align-content: center;
-        text-align: center;
-      }
-      #header {
-        width: auto;
-        height: auto;
-        min-height: 30px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px 40px;
-        background: #417690;
-        color: #ffc;
-        overflow: hidden;
-      }
-      #branding {
-        float: left;
-      }
-      #branding h1 {
-        padding: 0;
-        margin: 0 20px 0 0;
-        font-weight: 300;
-        font-size: 1.5rem;
-        color: #f5dd5d;
-      }
-      #links {
-        float: right;
-        padding: 0;
-        font-weight: 300;
-        font-size: 0.6875rem;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
-      }
-      #links a {
-        text-decoration: none;
-        color: white;
-      }
-      .loader {
-        width: 48px;
-        height: 48px;
-        border: 5px solid #FFF;
-        border-bottom-color: #FF3D00;
-        border-radius: 50%;
-        display: inline-block;
-        box-sizing: border-box;
-        animation: rotation 1s linear infinite;
-        vertical-align: middle;
-      }
-      @keyframes rotation {
-        0% {
-          transform: rotate(0deg);
-        }
-        100% {
-          transform: rotate(360deg);
-        }
-      }
-      ul {
-        list-style: none;
-        text-align: right;
-        border-top: 1px solid gray;
-      }
-      .btn {
-        border: none;
-        color: black;
-        padding: 10px 7px;
-        text-align: center;
-        -webkit-transition-duration: 0.4s;
-        transition-duration: 0.4s;
-        margin: 16px 0 !important;
-        text-decoration: none;
-        font-size: 13px;
-        cursor: pointer;
-        transition-duration: 0.4s;
-        border: 1px solid;
-        border-radius: 15px;
-        background-color: white;
-      }
-      .btn:disabled {
-        color: -internal-light-dark(rgba(16, 16, 16, 0.3), rgba(255, 255, 255, 0.3));
-        border-color: gray;
-      }
-      .btn:disabled:hover{
-        background-color: white; 
-        color: black;
-      }
-      .btn-verde {
-        border-color: #4CAF50; 
-      }
-      .btn-azul {
-        border-color:  blue;
-      }
-      .btn-verde:hover {
-        background-color: #4CAF50; 
-        color: white;
-      }
-      .btn-azul:hover {
-        background-color: blue;
-        color: white;
-      }
+{% block title %} Página de Coleta | Coleta de Notícias {% endblock %}
+{% block subtitle %} Página de Coleta | Coleta de Notícias {% endblock %}
 
-      ol.gradient-list > li::before, ol.gradient-list > li {
-        box-shadow: 0.25rem 0.25rem 0.6rem rgba(0, 0, 0, 0.05), 0 0.5rem 1.125rem rgba(75, 0, 0, 0.05);
-      }
-      ol.gradient-list {
-        counter-reset: gradient-counter;
-        list-style: none;
-        margin: 1.75rem 0;
-        padding-left: 1rem;
-      }
-      ol.gradient-list > li {
-        background: white;
-        border-radius: 0 0.5rem 0.5rem 0.5rem;
-        counter-increment: gradient-counter;
-        margin-top: 1rem;
-        min-height: 3rem;
-        padding: 1rem 1rem 1rem 3rem;
-        position: relative;
-      }
-    </style>
+{% block content %}
 
-  </head>
-  <body>
-    <nav id="header">
-      <div id="branding">
-        <h1>Página Inicial | Coleta de Notícias</h1>
-      </div>
-      <div id="links">
-        <a href="{% url 'admin:index' %}">Acessar a administração</a>
-      </div>
-    </nav>
+  <script src="{% static 'coleta/js/index.js' %}"></script>
+  <h1>Projetos</h1>
+  
+  {% for projeto in projetos %}
+    <div class="row">
+      <div class="col card_col">
+        <div>
+          {{ projeto }} <button data-projeto="{{projeto.id}}" class="btn btn-outline-primary coletar_btn">Coletar dados</button>
+        </div> 
 
-    <div class="wrapper">
+        <div>
+          <a  target="_blank" class="btn btn-outline-success" href="{% url 'dashboard:projeto' projeto_id=projeto.id %}">Acessar o projeto</a> 
+        </div>
 
-      <div>
-        <h2>Projetos</h2>
-
-        <ol class="gradient-list">
-          {% for projeto in projetos %}
+        <ul class="lista_interna">
+          {% for palavra_chave in projeto.palavras_chaves.all %}
             <li>
               <div>
-                {{ projeto }} <button data-projeto="{{projeto.id}}" class="btn btn-verde coletar_btn">Coletar dados</button>
-              </div> 
-
-              <ul>
-                {% for palavra_chave in projeto.palavras_chaves.all %}
-                  <li>
-                    <div>
-                      {{palavra_chave.palavra_chave}} 
-                      <button data-projeto="{{projeto.id}}" data-palavra_chave="{{palavra_chave.id}}" class="btn btn-azul coletar_btn">Coletar dados</button>
-                    </div>
-                  </li>
-                {% endfor %}
-              </ul>
-
+                {{palavra_chave.palavra_chave}} 
+                <button data-projeto="{{projeto.id}}" data-palavra_chave="{{palavra_chave.id}}" class="btn btn-outline-primary coletar_btn">Coletar dados</button>
+              </div>
             </li>
           {% endfor %}
-        </ol>
-
+        </ul>
       </div>
-
     </div>
-    
-    <script>
-      const exec_funcao_botoes = acao => {
-        var elementos = document.getElementsByClassName("coletar_btn");
-        Array.from(elementos).forEach(elemento => {
-          if (acao ==  1) {
-            elemento.addEventListener('click', evento => {
-              let span = document.createElement('span')
-              span.classList.add('loader')
-              span.id = 'loading'
-              elemento.parentNode.append(span)
-              executar_coleta(evento.target.dataset.projeto, evento.target.dataset.palavra_chave??0)
-            });
-          } else if(acao == 2) {
-            /* Travar todos os botões */
-            elemento.setAttribute('disabled', true)
-          } else {
-            /* Destravar todos os botões */
-            elemento.removeAttribute('disabled')
-            let span = document.getElementById('loading');
-            if (span != null) {
-              span.remove()
-            }
-          }
-        });
-      }
 
-      const executar_coleta = async (projeto, palavra_chave) => {
-        exec_funcao_botoes(2)
-        fetch(`executar_coleta/${projeto}/${palavra_chave}`)
-        .then(response => {
-          return response.json();
-        })
-        .then(data => {
-          alert("Execução completada!")
-          exec_funcao_botoes(3)
-        })
-        .catch((response) => {
-          console.log(response)
-          alert("Um erro aconteceu ao executar o script!")
-          exec_funcao_botoes(3)
-        })
-      }
+  {% empty %}
+    <h3>Nenhum projeto foi encontrado!</h3>
 
-      exec_funcao_botoes(1)
-    </script>
+  {% endfor %}
 
-  </body>
-</html>
+{% endblock %}

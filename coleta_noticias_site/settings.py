@@ -44,7 +44,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'coleta',
-    'coletor_lib'
+    'processamento',
+    'dashboard'
 ]
 
 MIDDLEWARE = [
@@ -89,6 +90,7 @@ DATABASES = {
         'PASSWORD': env('DB_PASS'),
         'HOST': env('DB_HOST'),
         'PORT': env('DB_PORT'),
+        'OPTIONS': {'charset': 'utf8mb4', 'sql_mode': 'traditional'},
     },
     'sqlite': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -137,6 +139,4 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-COLETOR_PATH = os.path.join(Path().resolve(), "coletor_lib")
-COLETOR_EXEC = os.path.join(Path().resolve(), "coletor_lib", "main.py")
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000

@@ -1,0 +1,61 @@
+{% load static %}
+<html>
+  <head>
+    <title>{% block title %}{% endblock %}</title>
+
+    <link rel="stylesheet" type="text/css" href="{% static 'coleta/css/bootstrap.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'coleta/css/template.css' %}">
+    <script src="{% static 'coleta/js/jquery.js' %}"></script>
+    <script src="{% static 'coleta/js/bootstrap.js' %}"></script>
+
+  </head>
+  <body>
+    
+    <nav class="navbar bg-primary navbar-expand-lg bg-body-tertiar" data-bs-theme="dark">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="#">{% block subtitle %}{% endblock %}</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0"></ul>
+
+          <ul class="navbar-nav">
+            <li class="nav-item">
+              <a class="nav-link" target="_blank" href="{% url 'admin:index' %}">Acessar a administração</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <br>
+
+    <section class="container-fluid text-center">
+      {% block content %}
+      {% endblock %}
+    </section>
+
+    <!-- Modal -->
+    <div class="modal fade" id="alertavel" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="exampleModalLabel">Aviso</h1>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <input type="hidden" id="csrf_token" value="{{ csrf_token }}"/>
+
+    <footer></footer>
+    
+  </body>
+</html>

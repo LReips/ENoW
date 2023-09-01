@@ -1,9 +1,16 @@
 from django.contrib import admin
-from .models import Projeto, PalavraChave, SiteNoticia, Campo, InitEstruturaNoticia, EstruturaNoticia, ConteudoNoticia, Log
+from .models import *
+
+class ProjetoLocalInteresse(admin.StackedInline):
+  model = LocalInteresse
+
+class ProjetoAdmin(admin.ModelAdmin):
+  inlines = (ProjetoLocalInteresse,)
+  list_display = ('id', 'nome')
 
 class SiteNoticiaAdmin(admin.ModelAdmin):
-  list_filter = ('tipo_paginacao', )
-  list_display = ('id','nome','acessar_pagina_interna')
+  list_filter = ('tipo_paginacao', 'estado')
+  list_display = ('id','nome','acessar_pagina_interna', 'tipo_paginacao')
 
 class InitEstruturaNoticiaAdmin(admin.ModelAdmin):
   list_filter = ('site', )
@@ -12,11 +19,12 @@ class EstruturaNoticiaAdmin(admin.ModelAdmin):
   list_filter = ('campo', 'inicio_estrutura_noticia__site',)
 
 class ConteudoNoticiaAdmin(admin.ModelAdmin):
-  list_filter = ('projeto', 'site')
+  list_filter = ('site', )
 
+admin.site.register(Projeto, ProjetoAdmin)
 admin.site.register(SiteNoticia, SiteNoticiaAdmin)
 admin.site.register(InitEstruturaNoticia, InitEstruturaNoticiaAdmin)
 admin.site.register(EstruturaNoticia, EstruturaNoticiaAdmin)
 admin.site.register(ConteudoNoticia, ConteudoNoticiaAdmin)
 
-admin.site.register([Projeto, PalavraChave, Campo])
+admin.site.register([PalavraChave, Campo])

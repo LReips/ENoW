@@ -1,0 +1,25 @@
+{% extends "coleta/template.html" %}
+{% load static %}
+
+{% block title %} Dashboard | Coleta de Notícias {% endblock %}
+{% block subtitle %} Dashboard | {{projeto.id}} - {{projeto.nome}}{% endblock %}
+
+
+{% block content %}
+  <style>
+    #div_grafico1 {
+      max-height: 600px;
+      max-width: 100%;
+    }
+  </style>
+
+  <script src="{% static 'dashboard/js/chart.umd.min.js' %}"></script>
+  <script src="{% static 'dashboard/js/graficos.js' %}"></script>
+
+  <input type="hidden" id="projeto_id" value="{{projeto.id}}"/>
+
+  <div class="row" id="div_graficos">
+
+  </div>
+
+{% endblock %}

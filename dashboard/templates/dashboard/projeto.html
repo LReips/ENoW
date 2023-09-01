@@ -1,0 +1,123 @@
+{% extends "coleta/template.html" %}
+{% load static %}
+
+{% block title %} Dashboard | Coleta de Notícias {% endblock %}
+{% block subtitle %} Dashboard | {{projeto.id}} - {{projeto.nome}}{% endblock %}
+
+{% block content %}
+  <link rel="stylesheet" type="text/css" href="{% static 'dashboard/datatables/datatables.min.css' %}" >
+  <link rel="stylesheet" type="text/css" href="{% static 'dashboard/datatables/DataTables-1.13.6/css/dataTables.bootstrap5.min.css' %}" >
+  <link rel="stylesheet" type="text/css" href="{% static 'dashboard/datatables/FixedHeader-3.4.0/css/fixedHeader.bootstrap5.min.css' %}" >
+  
+  <script src="{% static 'dashboard/datatables/datatables.min.js' %}" ></script>
+  <script src="{% static 'dashboard/datatables/DataTables-1.13.6/js/dataTables.bootstrap5.min.js' %}" ></script>
+  <script src="{% static 'dashboard/datatables/FixedHeader-3.4.0/js/fixedHeader.bootstrap5.min.js' %}"></script>
+
+  <script src="{% static 'dashboard/js/projeto.js' %}"></script>
+
+  <input type="hidden" id="projeto_id" value="{{projeto.id}}" />
+
+  <div class="row">
+    <div class="col card_col">
+      <div style="margin-bottom: 13px;">
+        <a href="{% url 'dashboard:processamento' projeto_id=projeto.id %}" target="_blank" class="btn btn-primary">Executar processamento de notícias</a>
+        <button id="gerar_csv_sbert" value="{{projeto.id}}" class="btn btn-warning">Gerar CSV com SBERT (SentenceTransformers)</button>
+        <a href="{% url 'dashboard:graficos' projeto_id=projeto.id %}" target="_blank" class="btn btn-secondary">Verificiar distribuição de notícias</a>
+      </div>
+    </div>
+  </div>
+
+  {% for chave in chaves %}
+    <div class="row">
+      <div class="col card_col">
+        <div style="margin-bottom: 13px;">
+          Palavra-chave: <b>{{chave.chave}}</b>
+        </div> 
+  
+        <div class="row">
+          {% for site in chave.sites %}
+            
+            <div class="col-lg-3 col-md-4 col-sm-6">
+              {{site.site}}: <b>{{site.noticias}}</b>
+            </div>
+
+            {% empty %}
+              <h3>O projeto não possui sites vinculados!</h3>
+  
+          {% endfor %}
+        </div>
+
+      </div>
+    </div>
+
+    {% empty %}
+      <h3>O projeto não possui palavras-chaves vinculadas!</h3>
+
+  {% endfor %}
+
+  <div class="row">
+    <div class="col card_col">
+      <div style="margin-bottom: 13px;">
+        <b>Notícias gravadas (processadas):</b>
+      </div> 
+      
+      <div>
+        <table class="table table-striped-columns" id="tabela_noticias_processadas">
+          <thead>
+            <th class="table-dark">ID</th>
+            <th class="table-dark">SITE</th>
+            <th class="table-dark">TITULO</th>
+            <th class="table-dark">URL</th>
+            <th class="table-dark">AÇÕES</th>
+          </thead>
+          <tbody>
+            {% for noticia_processada in noticias_processadas %}
+              
+              <tr>
+                <td>{{noticia_processada.noticia.id}}</td>
+                <td>{{noticia_processada.noticia.site.nome}}</td>
+                <td>{{noticia_processada.noticia.titulo}}</td>
+                <td> <a class="btn btn-info btn-sm" href="{{noticia_processada.noticia.url}}" target="_blank">Acessar</a> </td>
+                <td> <button class="btn btn-danger btn-sm deletar_noticia_processada" value="{{noticia_processada.id}}" target="_blank">Deletar</button> </td>
+              </tr>
+              
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      
+    </div>
+  </div>
+
+  <br>
+  
+  <div class="row">
+    <div class="col card_col">
+      <div style="margin-bottom: 13px;">
+        <b>Notícias possivelmente duplicadas:</b>
+      </div> 
+    
+      <div>
+        <table class="table table-striped-columns" id="tabela_noticias_duplicadas">
+          <thead>
+            <th class="table-dark">Site</th>
+            <th class="table-dark">TITULO</th>
+            <th class="table-dark">URL</th>
+          </thead>
+          <tbody>
+            {% for noticia_processada in noticias_duplicadas %}
+    
+              <tr>
+                <td>{{noticia_processada.noticia.site.nome}}</td>
+                <td>{{noticia_processada.noticia.titulo}}</td>
+                <td> <a class="btn btn-info btn-sm" href="{{noticia_processada.noticia.url}}" target="_blank">Acessar</a> </td>
+              </tr>
+    
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}

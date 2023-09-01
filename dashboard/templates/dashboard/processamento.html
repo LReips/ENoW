@@ -1,0 +1,165 @@
+{% extends "coleta/template.html" %}
+{% load static %}
+
+{% block title %} Dashboard | Coleta de Notícias {% endblock %}
+{% block subtitle %} Dashboard | {{projeto.id}} - {{projeto.nome}}{% endblock %}
+
+{% block content %}
+
+  <link rel="stylesheet" type="text/css" href="{% static 'dashboard/datatables/datatables.min.css' %}" >
+  <link rel="stylesheet" type="text/css" href="{% static 'dashboard/datatables/DataTables-1.13.6/css/dataTables.bootstrap5.min.css' %}" >
+  <link rel="stylesheet" type="text/css" href="{% static 'dashboard/datatables/FixedHeader-3.4.0/css/fixedHeader.bootstrap5.min.css' %}" >
+
+  <script src="{% static 'dashboard/datatables/datatables.min.js' %}" ></script>
+  <script src="{% static 'dashboard/datatables/DataTables-1.13.6/js/dataTables.bootstrap5.min.js' %}" ></script>
+  <script src="{% static 'dashboard/datatables/FixedHeader-3.4.0/js/fixedHeader.bootstrap5.min.js' %}"></script>
+
+  <script src="{% static 'dashboard/js/processamento.js' %}"></script>
+
+  <input type="hidden" id="projeto_id" value="{{projeto.id}}" />
+
+  <div class="row">
+    <div class="col card_col">
+      <div style="margin-bottom: 13px;">
+        <b>Notícias</b>
+      </div> 
+      
+      <div>
+        <table id="tabela_noticias" class="table table-striped-columns">
+          <thead>
+            <td class="table-dark">ID</td>
+            <th class="table-dark">SITE</th>
+            <th class="table-dark">NOTICIA</th>
+            <th class="table-dark">PONTUAÇÕES</th>
+            <th class="table-dark">LINK</th>
+            <th class="table-dark">AÇÃO</th>
+          </thead>
+          <tbody>
+            {% for noticia in noticias %}
+              
+              <tr>
+                <td>{{noticia.id}}</td>
+                <td>{{noticia.site.nome}}</td>
+                <td>{{noticia.titulo}}</td>
+                <td></td>
+                <td> <a class="btn btn-info btn-sm" href="{{noticia.url}}" target="_blank">Acessar</a> </td>
+                <td> 
+                  <div class="btn-group" role="group">
+                    <input type="checkbox" class="btn-check check_noticias" name="noticias" value="{{noticia.id}}" id="noticia_check_{{noticia.id}}" autocomplete="off">
+                    <label class="btn btn-outline-primary spc_label" for="noticia_check_{{noticia.id}}">Selecionar</label>
+                  </div>
+                </td>
+              </tr>
+              
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="text-start" id="div_metricas_rotulos_reais">
+        
+      </div>
+
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col card_col">
+      <div style="margin-bottom: 13px;">
+        <button id="executar_processamento" class="btn btn-success">Executar processamento</button>
+        <button id="historico_processamento" class="btn btn-secondary">Ver histórico de processamento</button>
+        <br>
+        <small>Ao fechar esta aba, este processamento será finalizado!</small>
+      </div> 
+
+      <div class="row text-start">
+        <div class="mb-3">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" id="salvar_noticias">
+            <label class="form-check-label" for="salvar_noticias">Salvar as notícias automaticamente?</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="row text-start">
+        <div class="mb-3">
+          <b for="nota_corte" class="form-label">Insira um fator de margem (opcional):</b>
+          <input class="form-control" id="margem" placeholder="0,5" step="0.01" type="number"/>
+        </div>
+      </div>
+
+      <div class="text-start" id="div_totais_atual">
+        
+      </div>
+      
+      <div>
+        <table id="tabela_processamento" class="table table-striped-columns">
+          <thead>
+            <td class="table-dark">ID</td>
+            <th class="table-dark">SITE</th>
+            <th class="table-dark">NOTICIA</th>
+            <th class="table-dark">RÓTULO MANUAL</th>
+            <th class="table-dark">CLASSIF. LIMIAR</th>
+            <th class="table-dark">PONTUAÇÕES</th>
+            <th class="table-dark">ANÁLISE</th>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+      </div>
+  </div>
+
+  <!-- Modal de graficos de matriz de confusão -->
+  <div class="modal fade" data-toggle="modal" data-backdrop="static" data-keyboard="false" id="modal_matriz_confusao" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5"> <b>Matriz de confusão</b> </h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de pontuações -->
+  <div class="modal fade" data-toggle="modal" data-backdrop="static" data-keyboard="false" id="modal_pontuacoes" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5"> <b>Pontuações desta rodada de execuções</b> </h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de histórico -->
+  <div class="modal fade" data-toggle="modal" data-backdrop="static" data-keyboard="false" id="modal_historico" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5"> <b>Histórico de processamento</b> </h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}

@@ -1,0 +1,184 @@
+Preparação com SpaCy:
+
+Modelos pré-treinados:
+-> pequeno
+-> médio
+-> grande
+
+instalar o módulo
+download do modelo (o grande faz mais processos)
+carregar o módulo
+carregar o modelo: cria o objeto nlp
+
+SpaCy tem um pipeline, por padrão, chamando o objeto, ele faz vários processos já no texto.
+Dá para criar etapas personalizadas no pipeline.
+
+
+versão 3 do SpaCy (com mais recursos)
+
+pip install -U spacy==3.2.0
+python -m spacy download 'pt_core_news_lg'
+
+import spacy
+
+nlp = spacy.load('pt_core_news_lg')
+
+para ver o pipeline:
+print(nlp.pipe_names)
+
+documento = nlp("texto texto texto")
+
+ver os tokens do texto:
+for token in documento:
+  print(token.text)
+
+token na posição 3:
+print(documento[3])
+
+token nas posições 3 e 4:
+print(documento[3:5])
+
+ver se o token é uma stop word:
+print(token.is_stop for token in documento)
+
+ver se o token é alfanumérico:
+print(token.is_alpha for token in documento)
+
+ver se o token é maiúsculo:
+print(token.is_upper for token in documento)
+
+ver se o token é pontuação:
+print(token.is_punct for token in documento)
+
+ver se o token é número:
+print(token.is_like for token in documento)
+
+ver se o token é sentença inicial:
+print(token.is_sent_start for token in documento)
+
+buscar elementos numéricos:
+for token.like_num:
+  print(token.text)
+
+buscar elementos pontuações:
+for token.is_punct:
+  print(token.text)
+
+Part-of-speech (Pós), dependências, lema, shape (formato):
+for token in documento:
+  print(token.text, " - ", token.pos_, " - ", token.dep_, " - ", token.lemma_, " - ", token.shape_)
+
+morfologia do token:
+for token in documento:
+  print(token.text, " - ", token.morph)
+
+classe gramatical do token:
+for token in documento:
+  print(token.text, " - ", token.tag_)
+
+Entidades Nomeadas:
+for ent in documento.ents:
+  print(ent.text, " - ", ent.label_)
+
+Stop Words default no SpaCy:
+for words in nlp,Defaults.stopwords:
+  print(words)
+
+adicionar stop words:
+nlp.Defaults,stop_words.add("eita")
+nlp.vocab["eita"].is_stop = True
+
+lista com tokens:
+token_lista = []
+for token in documento:
+  token_lista.append(token.text)
+
+lista com stop words:
+stop_lista = []
+for words in nlp.Defaults.stop_words:
+  stop_lista.append(words)
+
+lista sem stop words:
+semstop = [word for word in token_lista if not word in stop_lista]
+
+comparar com e sem stop words:
+print(documento.text)
+print(semstop)
+
+ver o hash das palavras:
+print(nlp.vocab.strings["caravelas"])
+print(documento.vocab.strings["caravelas"])
+
+Similaridade entre duas sentenças (modelo large do idioma):
+A semelhança é entre 0 e 1 (0 nada semelhante, 1 totalmente semelhante), utiliza o word embedding e word2vec.
+Para melhorar a performance: usa sentenças menores (span); utiliza a função sense2vec para a similaridade; remove as stopwords, pontuação, pronomes.
+
+documento1 = nlp("texto1")
+documento2 = nlp("texto2")
+print(documento1.similarity(documento2))
+
+a similaridade não trabalha com o contexto, não entende o significado da frase
+
+comparando tokens:
+documento3 = nlp("texto1")
+tokenA = documento3[0]
+print(tokenA)
+tokenB = documento[2]
+print(tokenB)
+print(tokenA.similarity(tokenB))
+
+Matching (busca um padrão entre as sentenças, semelhança de contexto):
+importa a lib e inicializa:
+
+from typing import Match
+from spacy.matcher import Matcher
+
+documento5 = nlp("Você pode ligar para (55) 888888888 ou (11) 1234789")
+
+matcher = Matcher(nlp.vocab)
+
+depois add um padrão:
+
+padrao = [{"ORTH": "("}, {"SHAPE": "dd"},{"ORTH": ")"}, {"ORTH": "-", "OP": "?"}, {"IS_DIGIT": True}]
+matcher.add("telefone", [padrao])
+
+matches = matcher(documento5)
+for id, inicio, fim in matches:
+  print(documento5[inicio:fim])
+
+palavras escritas de formas diferentes:
+
+documento6 = nlp("Antes era microondas, depois micro ondas ou MICRO ONDAS e, por fim, micro-ondas")
+matcher = Matcher(nlp.vocab)
+padrao1 = [{"LOWER": "microondas"}]
+padrao2 = [{"LOWER": "micro"}, {"LOWER": "ondas"}]
+padrao3 = [{"LOWER": "{"LOWER": "micro-ondas"}"}]
+
+matcher.add("padrao", [padrao1,padrao2,padrao3])
+
+matches = matcher(documento6)
+for id, inicio, fim in matches:
+  print(documento6[inicio:fim])
+
+Displacy (visualização para entidades nomeadas e dependências):
+primeiro importa o displacy:
+
+from spacy import displacy
+
+para reconhecer as entidades nomeadas:
+displacy.render(documento, style="ent", jupyter=True)
+
+criando dependências:
+displacy.render(documento, style="dep", jupyter=True, options={'compact': False, 'distance': 60, 'color': '#FFFFFF', 'bg': '#000000', 'font': 'Arial'})
+
+Pipelines:
+print("Pipeline Normal: ", nlp.pipe_names)
+
+remover uma etapa do pipeline:
+nlp.remove_pipe('tok2vec')
+
+adicionar uma etapa do pipeline:
+nlp.add_pipe('tok2vec')
+
+informar a posição da etapa, ao adicionar:
+nlp.add_pipe('tok2vec', after='morphologizer')

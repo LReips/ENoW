@@ -1,0 +1,45 @@
+html, body {
+  width: 100%;
+  height: 100%;
+  background-color: rgba(243, 239, 239, 0.863);
+  margin: 0;
+  font-family: "Raleway", sans-serif;
+}
+ul.lista_interna {
+  list-style: none;
+  text-align: right;
+  border-top: 1px solid gray;
+}
+.card_col .btn {
+  margin: 5px;
+}
+.card_col {
+  box-shadow: 0.25rem 0.25rem 0.6rem rgba(0, 0, 0, 0.05), 0 0.5rem 1.125rem rgba(75, 0, 0, 0.05);
+  background: white;
+  border-radius: 0 0.5rem 0.5rem 0.5rem;
+  padding: 1rem 1rem 1rem 3rem;
+  margin: 0 10px 10px 10px;
+}
+.loader {
+  width: 37px;
+  height: 37px;
+  border: 5px solid #FFF;
+  border-bottom-color: #FF3D00;
+  border-radius: 50%!important;
+  display: inline-block;
+  box-sizing: border-box;
+  animation: rotation 1s linear infinite;
+  vertical-align: middle;
+}
+@keyframes rotation {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+.spc_label {
+  border-top-left-radius: 0!important;
+  border-bottom-left-radius: 0!important;
+}

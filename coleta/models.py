@@ -1,35 +1,39 @@
 from django.db import models
 
 SIM_NAO_OPCAO = [('S', 'SIM'), ('N','NÃO')]
-ESTADOS_BRASIL = [
-  ('AC', 'Acre'),
-  ('AL', 'Alagoas'),
-  ('AP', 'Amapá'),
-  ('AM', 'Amazonas'),
-  ('BA', 'Bahia'),
-  ('CE', 'Ceará'),
-  ('DF', 'Distrito Federal'),
-  ('ES', 'Espírito Santo'),
-  ('GO', 'Goiás'),
-  ('MA', 'Maranhão'),
-  ('MT', 'Mato Grosso'),
-  ('MS', 'Mato Grosso do Sul'),
-  ('MG', 'Minas Gerais'),
-  ('PA', 'Pará'),
-  ('PB', 'Paraíba'),
-  ('PR', 'Paraná'),
-  ('PE', 'Pernambuco'),
-  ('PI', 'Piauí'),
-  ('RJ', 'Rio de Janeiro'),
-  ('RN', 'Rio Grande do Norte'),
-  ('RS', 'Rio Grande do Sul'),
-  ('RO', 'Rondônia'),
-  ('RR', 'Roraima'),
-  ('SC', 'Santa Catarina'),
-  ('SP', 'São Paulo'),
-  ('SE', 'Sergipe'),
-  ('TO', 'Tocantins')
+
+REGIOES_BRASIL = [
+  ('NORTE', 'Região Norte'),
+  ('NORDESTE', 'Região Nordeste'),
+  ('CENTRO-OESTE', 'Região Centro-Oeste'),
+  ('SUDESTE', 'Região Sudeste'),
+  ('SUL', 'Região Sul')
 ]
+
+class Estado(models.Model):
+  ibge = models.IntegerField(unique=True)
+  nome = models.CharField(max_length=255)
+  uf = models.CharField(max_length=2, unique=True)
+  regiao = models.CharField(max_length=15, choices=REGIOES_BRASIL)
+
+  class Meta:
+    ordering = ['uf']
+
+  def __str__(self):
+    return '{} - {}'.format(self.uf, self.nome)
+
+class Cidade(models.Model):
+  ibge = models.IntegerField(unique=True)
+  nome = models.CharField(max_length=355)
+  estado = models.ForeignKey(Estado, to_field="uf", db_column="uf", on_delete=models.DO_NOTHING)
+  latitude = models.CharField(max_length=30, blank=True)
+  longitude = models.CharField(max_length=30, blank=True)
+
+  class Meta:
+    ordering = ['id']
+
+  def __str__(self):
+    return '{} - {}'.format(self.id, self.nome)
 
 class SiteNoticia(models.Model):
   TIPO_PAGINACAO = [
@@ -41,7 +45,7 @@ class SiteNoticia(models.Model):
 
   nome = models.CharField(max_length=255, null=False)
   url = models.CharField(max_length=255, null=False)
-  estado = models.CharField(max_length=255, null=True, blank=True, choices=ESTADOS_BRASIL)
+  estado = models.ForeignKey(Estado, to_field="uf", db_column="uf", on_delete=models.DO_NOTHING)
   pais = models.CharField(max_length=255, null=True, blank=True)
   acessar_pagina_interna = models.CharField(max_length=1, choices = SIM_NAO_OPCAO,null=False)
   tipo_paginacao = models.CharField(max_length=100, choices = TIPO_PAGINACAO, null=True, blank=True)
@@ -50,6 +54,7 @@ class SiteNoticia(models.Model):
 
   class Meta:
     ordering = ['id']
+    verbose_name_plural = 'Sites de notícias'
 
   def __str__(self):
     return '{} - {}'.format(self.id, self.nome) 
@@ -63,7 +68,7 @@ class PalavraChave(models.Model):
 
   def __str__(self):
     return '{} - {}'.format(self.id, self.palavra_chave) 
-  
+
 class Campo(models.Model):
   tipo =  models.CharField(max_length=255, null=False, help_text="Cadastrar sem acentos")
 
@@ -81,6 +86,7 @@ class InitEstruturaNoticia(models.Model):
 
   class Meta:
     ordering = ['id']
+    verbose_name_plural = 'Estrutura inicial de lista de notícias'
 
   def __str__(self):
     return 'Estrutura inicial de notícias {} | {}'.format(self.id, self.site.nome)
@@ -101,6 +107,7 @@ class EstruturaNoticia(models.Model):
 
   class Meta:
     ordering = ['id']
+    verbose_name_plural = 'Estrutura de lista de notícias'
 
   def __str__(self):
     return 'Estrutura de notícia {} - {} | {}'.format(self.id, self.campo.tipo, self.inicio_estrutura_noticia.site.nome)
@@ -118,7 +125,7 @@ class Projeto(models.Model):
 
   def __str__(self):
     return '{} - {}'.format(self.id, self.nome)
-  
+
 class ConteudoNoticia(models.Model):
   titulo = models.CharField(max_length=300, null=False, blank=True)
   descricao = models.TextField(null=True, blank=True)
@@ -127,7 +134,8 @@ class ConteudoNoticia(models.Model):
   mes = models.CharField(max_length=20,null=True, blank=True)
   ano = models.CharField(max_length=20,null=True, blank=True)
   data_formatada = models.CharField(max_length=100,null=True, blank=True)
-  localizacao = models.CharField(max_length=100,null=True, blank=True)
+  estado = models.ForeignKey(Estado, to_field="uf", db_column="estado", on_delete=models.DO_NOTHING, null=True)
+  cidade = models.ForeignKey(Cidade, to_field="ibge", db_column="cidade", on_delete=models.DO_NOTHING, null=True)
   imagem = models.CharField(max_length=355,null=True, blank=True)
   url = models.CharField(max_length=355,null=True, blank=True)
   caminho_img_local = models.CharField(max_length=355,null=True, blank=True)
@@ -138,10 +146,11 @@ class ConteudoNoticia(models.Model):
   site = models.ForeignKey(SiteNoticia, on_delete=models.CASCADE)
   projeto = models.ForeignKey(Projeto, on_delete=models.CASCADE)
 
-  palavras_chaves = models.ManyToManyField(PalavraChave)
+  palavras_chaves = models.ManyToManyField(PalavraChave, "palavra_por_noticia")
 
   class Meta:
     ordering = ['id']
+    verbose_name_plural = 'Notícias coletadas'
 
   def __str__(self):
     return '{} - {} | {} | {}'.format(self.id, self.titulo, self.site.nome, self.projeto.nome)
@@ -162,4 +171,11 @@ class Log(models.Model):
     ordering = ['id']
 
   def __str__(self):
-    return '{} - {} | {} | {}'.format(self.id, self.noticia.titulo, self.site.nome, self.projeto.nome)
+    titulo = 'Sem notícia'
+    if self.conteudo_noticia is not None:
+      titulo = self.conteudo_noticia.titulo
+    return '{} - {} | {} | {}'.format(self.id, titulo, self.site.nome, self.projeto.nome)
+
+class LocalInteresse(models.Model):
+  projeto = models.OneToOneField(Projeto, on_delete=models.CASCADE, related_name="local_interessante")
+  sentenca = models.TextField(help_text='Separado por virgula')

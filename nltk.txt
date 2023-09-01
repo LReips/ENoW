@@ -1,0 +1,99 @@
+NLTK:
+1) instalar nltk;
+2) importar bibliotecas/módulos;
+3) downloads de dados, modelos...
+
+import nltk
+from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer, WordNetLemmatizer, SnowballStemmer, LancasterStemmer
+from nltk.tokenize import word_tokenize, sent_tokenize
+from nltk.tag import pos_tag, pos_tag_sents
+import string
+
+nltk.downloads('stopwords') ou nltk.downloads('words')
+nltk.downloads('punkt')
+nltk.downloads('tagsets')
+nltk.downloads('wordnet')
+nltk.downloads('averanged_perceptron_tagger')
+nltk.downloads('maxent_ne_chunker')
+nltk.downloads('words')
+
+separar tokens de sentenças (faz uma lista de sentenças):
+sentencas = sent_tokenize(Texto, language="portuguese")
+
+tokenização de palavras:
+tokens = word_tekenize(Texto, language="portuguese")
+
+lista de stop words:
+stops = stopwords.words("portuguese")
+print(stops)
+
+para remover essas stop words:
+palavras_sem_stop_words = [p for p in tokens if p not in stops]
+print(len(palavras_sem_stop_words))
+print(Texto)
+print(palavras_sem_stop_words)
+
+pontuações consideradas na lib nltk:
+print(string.ponctuation)
+
+remover pontuações:
+palavras_sem_pontuacao = [p for p in palavras_sem_stop_words if p not in string.ponctuation]
+print(len(palavras_sem_stop_words))
+print(Texto)
+print(palavras_sem_pontuacao)
+
+distribuição de frequência das palavras (o objeto frequência mostra as quantidades de vezes que a palavra apareceu):
+frequencia  nltk.FreqDist(palavras_sem_pontuacao)
+frequencia
+
+as 5 palavras mais comuns no texto:
+mais_comuns = frequencia.most_common(5)
+mais_comuns
+
+técnicas de Stemming no NLTK (reduzir as palavras a sua forma raiz):
+1) Porter (coloca a maioria no singular, sem letras maiúsculas, criou uma mesma referência para cada palavra, para o algoritmo saber que se trata da mesma coisa, mesmo significado):
+stemmer = PorterStemmer()
+stem1 = [stemmer.stem(word) for word in palavras_sem_stopwords]
+print(palavras_sem_pontuacao)
+print(stem1)
+
+2) Snowball (deixa mais o prefixo, tira mais letras que o Porter)
+stemmer = SnowballStemmer("portuguese")
+stem1 = [stemmer.stem(word) for word in palavras_sem_pontuacao]
+print(palavras_sem_pontuacao)
+print(stem1)
+
+3) Lancaster (mais parecido com o Porter):
+stemmer = LancasterStemmer()
+stem1 = [stemmer.stem(word) for word in palavras_sem_pontuacao]
+print(palavras_sem_pontuacao)
+print(stem1)
+
+Pós-taggin (marca as tags):
+pos = nltk.pos_tag(palavras_sem_pontuacao, lang="port")
+print(pos)
+
+Tratar pós a nível de sentença:
+token = sent_tokenize(Texto)
+
+ntokens = []
+for tokensentenca in token:
+  ntokens.append(word_tokenize(tokensentenca))
+
+print(ntokens)
+
+possentenca = pos_tag_sents(ntokes)
+print(possentenca)
+
+Lematização:
+lemmatizer = WordNetLemmatizer()
+resultado = [lemmatizer.lemmatize(palavra) for palavra in palavras_sem_pontuacao]
+print(palavras_sem_pontuacao)
+print(resultado)
+
+Entidades Nomeadas:
+token = word_tokenize(Texto)
+tags = pos_tag(token)
+en = nltk.ne_chunk(tags)
+print(en)s
