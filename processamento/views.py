@@ -35,19 +35,13 @@ def carregar_historico_view(request, id):
 
 @require_http_methods(["GET"])
 @login_required(login_url='/admin/login')
-def carregar_pontuacoes_view(request, id):
-  obj = ProcessamentoSrv()
-  id_processamento = request.GET['id_processamento']
-  noticia = request.GET['noticia']
-
-  resultado, status = obj.carregar_pontuacoes(id, id_processamento, noticia)
-  return JsonResponse(resultado, safe=False, json_dumps_params={'ensure_ascii': False}, status=status)
-
-@require_http_methods(["GET"])
-@login_required(login_url='/admin/login')
 def carregar_noticias_view(request, id):
   obj = ProcessamentoSrv()
-  resultado, status = obj.buscar_noticias(id)
+
+  filtrar_noticias = request.GET['filtrar_noticias']
+  id_processamento = request.GET['id_processamento']
+
+  resultado, status = obj.buscar_noticias(id, id_processamento, filtrar_noticias)
   return JsonResponse(resultado, safe=False, json_dumps_params={'ensure_ascii': False}, status=status)
 
 @require_http_methods(["DELETE"])
@@ -55,13 +49,6 @@ def carregar_noticias_view(request, id):
 def deletar_noticia_view(request, id):
   obj = ProcessamentoSrv()
   resultado, status = obj.deletar_noticia_processada(id)
-  return JsonResponse(resultado, safe=False, json_dumps_params={'ensure_ascii': False}, status=status)
-
-@require_http_methods(["GET"])
-@login_required(login_url='/admin/login')
-def gerar_csv_sbert_view(request, id):
-  obj = CsvSbertSrv()
-  resultado, status = obj.gerar_csv(id)
   return JsonResponse(resultado, safe=False, json_dumps_params={'ensure_ascii': False}, status=status)
 
 @require_http_methods(["GET"])

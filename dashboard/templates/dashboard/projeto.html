@@ -21,8 +21,6 @@
     <div class="col card_col">
       <div style="margin-bottom: 13px;">
         <a href="{% url 'dashboard:processamento' projeto_id=projeto.id %}" target="_blank" class="btn btn-primary">Executar processamento de notícias</a>
-        <button id="gerar_csv_sbert" value="{{projeto.id}}" class="btn btn-warning">Gerar CSV com SBERT (SentenceTransformers)</button>
-        <a href="{% url 'dashboard:graficos' projeto_id=projeto.id %}" target="_blank" class="btn btn-secondary">Verificiar distribuição de notícias</a>
       </div>
     </div>
   </div>
@@ -90,34 +88,5 @@
   </div>
 
   <br>
-  
-  <div class="row">
-    <div class="col card_col">
-      <div style="margin-bottom: 13px;">
-        <b>Notícias possivelmente duplicadas:</b>
-      </div> 
-    
-      <div>
-        <table class="table table-striped-columns" id="tabela_noticias_duplicadas">
-          <thead>
-            <th class="table-dark">Site</th>
-            <th class="table-dark">TITULO</th>
-            <th class="table-dark">URL</th>
-          </thead>
-          <tbody>
-            {% for noticia_processada in noticias_duplicadas %}
-    
-              <tr>
-                <td>{{noticia_processada.noticia.site.nome}}</td>
-                <td>{{noticia_processada.noticia.titulo}}</td>
-                <td> <a class="btn btn-info btn-sm" href="{{noticia_processada.noticia.url}}" target="_blank">Acessar</a> </td>
-              </tr>
-    
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
 
 {% endblock %}

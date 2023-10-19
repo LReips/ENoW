@@ -10,25 +10,21 @@ $(document).ready(function(){
   });
   
   const tabela_noticias = new DataTable("#tabela_noticias",{fixedHeader: true})
-  const tabela_processamento = new DataTable("#tabela_processamento",{fixedHeader: true})
+  const tabela_processamento1 = new DataTable("#tabela_processamento1",{fixedHeader: true})
+  const tabela_processamento2 = new DataTable("#tabela_processamento2",{fixedHeader: true})
 
   const modal_historico = $("#modal_historico")
-  const modal_matriz_confusao = $("#modal_matriz_confusao")
-  const modal_pontuacoes = $("#modal_pontuacoes")
-
-  const input_margem = $("#margem")
+ 
+  const input_id_processamento = $("#id_processamento")
   const input_salvar_noticias = $("#salvar_noticias")
   const csrf_token = $("#csrf_token").val()
 
   /* Variavel de controle de processamento */
   const processamento = {
-    id: null,
+    id: '',
     projeto_id: $("#projeto_id").val(),
-    noticias_selecionadas: {},
-    limpar(id){
-      this.id = id
-      this.noticias_selecionadas = {}
-    }
+    noticias_reais: [],
+    noticias_falsas: []
   }
 
   const modal_alertavel = $("#alertavel").on('hidden.bs.modal', function (e) {
@@ -36,12 +32,23 @@ $(document).ready(function(){
   })
 
   const btn_executar_processamento = $("#executar_processamento").click(function(){
-    let noticias = Object.keys(processamento.noticias_selecionadas)
-    if (noticias.length == 0) {
+    $('.check_noticias').each(function(i,val){
+      if ($(val).is(":checked")) {
+        if(!processamento.noticias_reais.includes(val.value)) {
+          processamento.noticias_reais.push(val.value)
+        }
+      } else {
+        if(!processamento.noticias_falsas.includes(val.value)) {
+          processamento.noticias_falsas.push(val.value)
+        }
+      }
+    })
+
+    if (processamento.noticias_reais.length == 0) {
       aviso(false, "Seleciona uma ou mais notícias!")
     } else {
       toggle_botoes(false)
-      executar_processamento(noticias)
+      executar_processamento()
     }
   })
 
@@ -50,15 +57,70 @@ $(document).ready(function(){
     carregar_historico()
   })
 
-  const executar_processamento = noticias => {
+  const btn_carregar_noticias = $("#carregar_noticias").click(function(){
+    $('.check_noticias').each(function(i,val){
+      if ($(val).is(":checked")) {
+        if(!processamento.noticias_reais.includes(val.value)) {
+          processamento.noticias_reais.push(val.value)
+        }
+      } else {
+        if(!processamento.noticias_falsas.includes(val.value)) {
+          processamento.noticias_falsas.push(val.value)
+        }
+      }
+    })
+
+    toggle_botoes(false)
+    carregar_noticias(processamento.noticias_reais.concat(processamento.noticias_falsas))
+
+    //Se for o primeiro processamento e não houve nenhuma noticia real selecionada, ignorar as noticias falsas
+    if (processamento.id == null && processamento.noticias_reais.length == 0) {
+      processamento.noticias_falsas = []
+    }
+  })
+
+  const btn_carregar_processamento = $("#carregar_processamento").click(function(){
+    if (input_id_processamento.val() != "") {
+      processamento.id = input_id_processamento.val()
+      input_id_processamento.attr("disabled", true)
+      btn_carregar_processamento.attr("disabled", true)
+
+      toggle_botoes(true)
+      carregar_noticias([])
+
+    } else {
+      aviso(false, "Digite a id do processamento!", false)
+    }
+  })
+
+  const carregar_noticias = (filtrar_noticias) => {
+    fetch(`/processamento/buscar_noticias/${processamento.projeto_id}?filtrar_noticias=${filtrar_noticias}&id_processamento=${processamento.id}`)
+    .then(response => {
+      if (!response.ok) {
+        console.log(response)
+        throw new Error("Um erro aconteceu executar o processamento!")
+      } else {
+        return response.json()
+      }
+    })
+    .then(data => {
+      montar_noticias(data)
+      toggle_botoes(true)
+    })
+    .catch((error) => {
+      aviso(false, error)
+    })
+  }
+
+  const executar_processamento = () => {    
     let conf = {
       method: "POST",  
       headers: {"Content-Type": "application/json", 'X-CSRFToken': csrf_token},
       mode: 'same-origin',
       body: JSON.stringify({
         id_processamento: processamento.id,
-        noticias: noticias,
-        margem: input_margem.val() == ''? '0.5': input_margem.val(),
+        noticias_reais: processamento.noticias_reais,
+        noticias_falsas: processamento.noticias_falsas,
         salvar_noticias: input_salvar_noticias.is(':checked')? 'S':'N'
       })
     }
@@ -73,7 +135,11 @@ $(document).ready(function(){
       }
     })
     .then(data => {
-      montar_tabela_noticias_proximas(data.resultados.noticias_prox_limar)
+      processamento.id = data.resultados.id_processamento
+      input_id_processamento.val(processamento.id)
+      input_id_processamento.attr("disabled", true)
+      btn_carregar_processamento.attr("disabled", true)
+
       montar_classificacoes(data.classificacoes)
       montar_resultado_atual(data.resultados)
 
@@ -87,8 +153,6 @@ $(document).ready(function(){
       aviso(true, msg)
       toggle_botoes(true)
 
-      processamento.limpar(data.resultados.id_processamento)
-      tabela_noticias.$("input[name='noticias']:checked").prop("checked", false)
     })
     .catch((error) => {
       aviso(false, error)
@@ -96,8 +160,6 @@ $(document).ready(function(){
   }
 
   const montar_resultado_atual = resultados => {
-    let div_cm = modal_matriz_confusao.find(".modal-body > .row")
-    div_cm.empty()
 
     const montar = (div, arr, montar_matriz) => {
       arr.forEach(modelo => {
@@ -108,17 +170,17 @@ $(document).ready(function(){
             <div class="col-6"> <b>Acurácia: ${modelo.acuracia}</b> </div>
             <div class="col-6"> <b>Precisão: ${modelo.precisao}</b> </div>
             <div class="col-6"> <b>Recall: ${modelo.recall}</b> </div>
-            <div class="col-6"> <b>F1-Score: ${modelo.f1_score}</b> </div>
+            <div class="col-6"> <b>Recall: ${modelo.f1_score}</b> </div>
+            ` + 
+             ((montar_matriz)? 
+             `<button class="btn btn-secondary ver_matriz" value=${modelo.imagem}>Ver matriz</button>`:
+             `<div class="col-6"> <b>VP: ${modelo.vp}</b> </div>
+              <div class="col-6"> <b>VN: ${modelo.vn}</b> </div>
+              <div class="col-6"> <b>FP: ${modelo.fp}</b> </div>
+              <div class="col-6"> <b>FN: ${modelo.fn}</b> </div>` )
+            + `
           </div>
         `)
-
-        if (montar_matriz) {
-          div_cm.append(`
-            <div class="col-12">
-              <img src="${modelo.imagem}"/>
-            </div>
-          `)
-        }
       })
     }
 
@@ -128,51 +190,40 @@ $(document).ready(function(){
         <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#modelos_metricas_reais" aria-expanded="false">
           Métricas reais
         </button>
-
-        <button id="ver_modal_matriz_confusao" class="btn btn-secondary">Ver matriz de confusão</button>
       </div>
       <div id="modelos_metricas_reais" class="col-12 collapse"></div>
     `)
-    montar($("#modelos_metricas_reais"), resultados.metricas_reais, true)
+    montar($("#modelos_metricas_reais"), resultados.modelos_metricas_reais, true)
+
+    let div_metricas_rotulos_calculados = $("#div_metricas_rotulos_calculados")
+    div_metricas_rotulos_calculados.empty().append(`
+      <div class="col-12 text-start" style="margin-top: 5px;">
+        <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#modelos_rotulos_calculados" aria-expanded="false">
+          Métricas calculados
+        </button>
+      </div>
+      <div id="modelos_rotulos_calculados" class="col-12 collapse"></div>
+    `)
+    montar($("#modelos_rotulos_calculados"), resultados.modelos_rotulos_calculados, false)
 
     let div_totais_atual = $("#div_totais_atual")
     div_totais_atual.empty()
 
     div_totais_atual.append(`
       <div class="col-12" style="margin-top: 5px;">
-        <b> Limiar: ${resultados.limiar.replace('.',',')} | Margem: ${resultados.margem.replace('.',',')} | Limiar ajustado: ${resultados.limiar_ajustado.replace('.',',')}</b>
-        <br>
         <b> Acurácia: ${resultados.acuracia.replace('.',',')}</b> | <b> Precisão: ${resultados.precisao.replace('.',',')}</b>
         <br>
         <b> Recall: ${resultados.recall.replace('.',',')}</b> | <b> F1-Score: ${resultados.f1_score.replace('.',',')}</b>
       </div>
-      <div class="col-12 text-start">
-        <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#modelos_metricas_calculadas" aria-expanded="false">
-          Métricas calculadas
-        </button>
-      </div>
-      <div id="modelos_metricas_calculadas" class="col-12 collapse"></div>
     `)
-    montar($("#modelos_metricas_calculadas"), resultados.metricas_calculadas, false)
   }
 
-  const montar_tabela_noticias_proximas = noticias => {
+  const montar_noticias = noticias => {
     tabela_noticias.clear()
-
-    let up =
-       `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-up-short" viewBox="0 0 16 16"  style="color:green;">
-          <path fill-rule="evenodd" d="M8 12a.5.5 0 0 0 .5-.5V5.707l2.146 2.147a.5.5 0 0 0 .708-.708l-3-3a.5.5 0 0 0-.708 0l-3 3a.5.5 0 1 0 .708.708L7.5 5.707V11.5a.5.5 0 0 0 .5.5z"/>
-        </svg>`
-
-    let down = 
-      `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-down-short" viewBox="0 0 16 16" style="color:red;">
-        <path fill-rule="evenodd" d="M8 4a.5.5 0 0 1 .5.5v5.793l2.146-2.147a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 1 1 .708-.708L7.5 10.293V4.5A.5.5 0 0 1 8 4z"/>
-      </svg>`
 
     noticias.forEach(noticia=> {
       tabela_noticias.row.add([
-        noticia.id, `${noticia.indicador == 'SIM'? up:down} ${noticia.titulo}`, noticia.site,
-        `<button class="btn btn-secondary ver_pontuacoes" value="${noticia.id}">Ver</button>`,
+        noticia.id, noticia.site, noticia.titulo,
         `<a class="btn btn-info btn-sm" href="${noticia.url}" target="_blank">Acessar</a>`,
         `<div class="btn-group" role="group">
           <input type="checkbox" class="btn-check check_noticias" name="noticias" value="${noticia.id}" id="noticia_check_${noticia.id}" autocomplete="off">
@@ -223,6 +274,7 @@ $(document).ready(function(){
              <div class="col-12"> <b>Id: ${noticia.id}</b> </div>
              <div class="col-12"> <b>Site: ${noticia.site}</b> </div>
              <div class="col-12"> <b>Titulo: ${noticia.titulo}</b> </div>
+             <div class="col-12"> <b>Noticia real: ${noticia.tipo}</b> </div>
            </div>`
       })
 
@@ -235,6 +287,7 @@ $(document).ready(function(){
              <div class="col-6"> <b>Precisão: ${modelo.precisao}</b> </div>
              <div class="col-6"> <b>Recall: ${modelo.recall}</b> </div>
              <div class="col-6"> <b>F1-Score: ${modelo.f1_score}</b> </div>
+             <button class="btn btn-secondary ver_matriz" value=${modelo.imagem}>Ver matriz</button>
            </div>`
       })
 
@@ -247,6 +300,10 @@ $(document).ready(function(){
              <div class="col-6"> <b>Precisão: ${modelo.precisao}</b> </div>
              <div class="col-6"> <b>Recall: ${modelo.recall}</b> </div>
              <div class="col-6"> <b>F1-Score: ${modelo.f1_score}</b> </div>
+             <div class="col-6"> <b>VP: ${modelo.vp}</b> </div>
+             <div class="col-6"> <b>VN: ${modelo.vn}</b> </div>
+             <div class="col-6"> <b>FP: ${modelo.fp}</b> </div>
+             <div class="col-6"> <b>FN: ${modelo.fn}</b> </div>
            </div>`
       })
 
@@ -268,34 +325,24 @@ $(document).ready(function(){
           <hr>
 
           <div class="col-12 text-start">
-            <h5><b>Categorização com SBERT </b></h5>
+            <b> Acurácia: ${dado.acuracia}</b> | <b> Precisão: ${dado.precisao}</b>
+            <br>
+            <b> Recall: ${dado.recall}</b> | <b> F1-Score: ${dado.f1_score}</b>
           </div>
 
           <hr>
 
           <div class="col-12 text-start">
-            <b> Limiar: ${dado.limiar.replace('.',',')} | Margem: ${dado.margem.replace('.',',')} | Limiar ajustado: ${dado.limiar_ajustado.replace('.',',')}</b>
-            <br>
-            <b> Acurácia: ${dado.acuracia.replace('.',',')}</b> | <b> Precisão: ${dado.precisao.replace('.',',')}</b>
-            <br>
-            <b> Recall: ${dado.recall.replace('.',',')}</b> | <b> F1-Score: ${dado.f1_score.replace('.',',')}</b>
+            <h5><b>Classificação com base calculada (notícias treinadas) </b></h5>
           </div>
-
-          <hr>
-
-          <div class="col-12 text-start">
-            <h5><b>Classificação com Aprendizado de Máquina (com base rotulada) </b></h5>
-          </div>
-
-          <hr>
-
+          
           ${modelos_calculados}
+
+          <hr>
 
           <div class="col-12 text-start">
             <h5><b>Classificação com base real (rotulada manualmente) </b></h5>
           </div>
-
-          <hr>
 
           ${modelos_reais}
 
@@ -306,69 +353,44 @@ $(document).ready(function(){
   }
 
   const montar_classificacoes = classificacoes => {
-    tabela_processamento.clear()
+    tabela_processamento1.clear()
+    tabela_processamento2.clear()
+
+    let totais = {'VP': 0, 'FN': 0, 'VN': 0, 'FP': 0}
 
     classificacoes.forEach(noticia => {
       let analise = ``
       if (noticia.rotulo == 'REAL') {
-        analise = noticia.classificacao_limiar == 'REAL'? 'CORRETO POSITIVO' : 'INCORRETO NEGATIVO'
+        analise = noticia.classificacao == 'REAL'? 'VP' : 'FN'
       } else if (noticia.rotulo == 'FALSA') {
-        analise = noticia.classificacao_limiar == 'FALSA'? 'CORRETO NEGATIVO' : 'INCORRETO POSITIVO'
+        analise = noticia.classificacao == 'FALSA'? 'VN' : 'FP'
       }
+
+      totais[analise]++
+
+      let linha = [
+        noticia.id, noticia.site, noticia.titulo, `<a class="btn btn-info btn-sm" href="${noticia.url}" target="_blank">Acessar</a>`,
+        noticia.pontuacao_real, noticia.pontuacao_nao_real, analise, noticia.classificadores
+      ]
       
-      tabela_processamento.row.add([
-        noticia.id, noticia.site, noticia.titulo, 
-        noticia.rotulo, noticia.classificacao_limiar,
-        `<button class="btn btn-secondary ver_pontuacoes" value="${noticia.id}">Ver</button>`,
-        analise
-      ])
-    })
-
-    tabela_processamento.draw()
-  }
-
-  const carregar_pontuacoes = noticia => {
-    fetch(`/processamento/carregar_pontuacoes/${processamento.projeto_id}?id_processamento=${processamento.id}&noticia=${noticia}`)
-    .then(response => {
-      if (!response.ok) {
-        console.log(response)
-        throw new Error("Um erro aconteceu as pontuações!")
+      if (noticia.classificacao == 'REAL') {
+        tabela_processamento1.row.add(linha)
       } else {
-        return response.json()
+        tabela_processamento2.row.add(linha)
       }
     })
-    .then(data => {
-      montar_pontuacoes(data)
-      toggle_botoes(true)
-    })
-    .catch((error) => {
-      aviso(false, error)
-    })
-  }
 
-  const montar_pontuacoes = pontuacoes => {
-    let div = modal_pontuacoes.find(".modal-body")
-    div.empty()
+    tabela_processamento1.draw()
+    tabela_processamento2.draw()
 
-    if (pontuacoes.length == 0) {
-      div.append("As pontuações não foram encontradas!")
-    }
-
-    pontuacoes.forEach(pontuacao => {
-      div.append(`
-        <div class="row text-start">
-          <div class="col-12"><b>Id:</b> ${pontuacao.id}</div>
-          <div class="col-12"><b>Site:</b> ${pontuacao.site}</div>
-          <div class="col-12"><b>Titulo:</b> ${pontuacao.noticia}</div>
-          <div class="col-12"><b>Pontuação:</b> ${pontuacao.pontuacao.replace('.',',')}</div>
-        </div>
-        <hr>
-      `)
-    })
-  
-    $(".loader").remove()
-    $(".ver_pontuacoes").prop("disabled", false)
-    modal_pontuacoes.modal("show")
+    let div = $("#div_totais_analise")
+    div.html(`
+      <div class="col-12" style="margin-top: 5px;">
+        <b> VP: ${totais['VP']}</b> | <b> FN: ${totais['FN']}</b>
+        <br>
+        <b> VN: ${totais['VN']}</b> | <b> FP: ${totais['FP']}</b>
+      </div>
+    `)
   }
 
   const aviso = (ok, msg, reload = false) => {
@@ -394,38 +416,25 @@ $(document).ready(function(){
 
   const toggle_botoes = liberar => {
     if (!liberar) {
-      btn_historico_processamento.attr("disabled", true)
       btn_executar_processamento.attr("disabled", true)
-      btn_executar_processamento.parent().append($('<span class="loader">'))
+      btn_historico_processamento.attr("disabled", true)
+      btn_carregar_noticias.attr("disabled", true)
+      btn_carregar_noticias.parent().append($('<span class="loader">'))
     } else {
-      btn_historico_processamento.removeAttr("disabled")
       btn_executar_processamento.removeAttr("disabled")
+      btn_historico_processamento.removeAttr("disabled")
+      btn_carregar_noticias.removeAttr("disabled")
       $(".loader").remove()
     }
   }
-  
-  $(document).on("click", ".check_noticias", function(){
-    let noticia_id = $(this).val()
 
-    if (noticia_id in processamento.noticias_selecionadas) {
-      delete processamento.noticias_selecionadas[noticia_id]
-    } else {
-      let row = $(this).parent().parent().parent()
+  $(document).on("click", ".ver_matriz", function(){
+    var image = new Image();
+    image.src = $(this).val();
 
-
-      processamento.noticias_selecionadas[noticia_id] = {
-        id: noticia_id, site: '', titulo: ''
-      }
-    }
+    var w = window.open("",'targetWindow', `toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=750, height=750`);
+    w.document.write(image.outerHTML);
   })
 
-  $(document).on("click", "#ver_modal_matriz_confusao", function(){
-    modal_matriz_confusao.modal("show")
-  })
-
-  $(document).on("click", ".ver_pontuacoes", function(){
-    $(".ver_pontuacoes").attr("disabled")
-    $(this).parent().append($('<span class="loader">'))
-    carregar_pontuacoes($(this).val())
-  })
+  btn_carregar_noticias.trigger("click")
 })

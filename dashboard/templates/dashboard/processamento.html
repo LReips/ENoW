@@ -21,7 +21,7 @@
   <div class="row">
     <div class="col card_col">
       <div style="margin-bottom: 13px;">
-        <b>Notícias</b>
+        <h5>Notícias</h5>
       </div> 
       
       <div>
@@ -30,30 +30,16 @@
             <td class="table-dark">ID</td>
             <th class="table-dark">SITE</th>
             <th class="table-dark">NOTICIA</th>
-            <th class="table-dark">PONTUAÇÕES</th>
             <th class="table-dark">LINK</th>
             <th class="table-dark">AÇÃO</th>
           </thead>
           <tbody>
-            {% for noticia in noticias %}
-              
-              <tr>
-                <td>{{noticia.id}}</td>
-                <td>{{noticia.site.nome}}</td>
-                <td>{{noticia.titulo}}</td>
-                <td></td>
-                <td> <a class="btn btn-info btn-sm" href="{{noticia.url}}" target="_blank">Acessar</a> </td>
-                <td> 
-                  <div class="btn-group" role="group">
-                    <input type="checkbox" class="btn-check check_noticias" name="noticias" value="{{noticia.id}}" id="noticia_check_{{noticia.id}}" autocomplete="off">
-                    <label class="btn btn-outline-primary spc_label" for="noticia_check_{{noticia.id}}">Selecionar</label>
-                  </div>
-                </td>
-              </tr>
-              
-            {% endfor %}
           </tbody>
         </table>
+      </div>
+
+      <div class="text-start" id="div_metricas_rotulos_calculados">
+        
       </div>
 
       <div class="text-start" id="div_metricas_rotulos_reais">
@@ -64,14 +50,25 @@
   </div>
 
   <div class="row">
+
     <div class="col card_col">
+      
+      <div class="row text-start">
+        <div class="input-group mb-3">
+          <label class="input-group-text" for="id_processamento">ID Processamento</label>
+          <input id="id_processamento" class="form-control" placeholder="Insira a ID de processamento (opcional)">
+          <button class="btn btn-secondary" style="margin: 0" id="carregar_processamento">Carregar processamento</button>
+        </div>
+      </div>
+
       <div style="margin-bottom: 13px;">
         <button id="executar_processamento" class="btn btn-success">Executar processamento</button>
         <button id="historico_processamento" class="btn btn-secondary">Ver histórico de processamento</button>
+        <button id="carregar_noticias" class="btn btn-secondary">Carregar outras notícias</button>
         <br>
         <small>Ao fechar esta aba, este processamento será finalizado!</small>
-      </div> 
-
+      </div>
+      
       <div class="row text-start">
         <div class="mb-3">
           <div class="form-check form-switch">
@@ -80,70 +77,51 @@
           </div>
         </div>
       </div>
-
-      <div class="row text-start">
-        <div class="mb-3">
-          <b for="nota_corte" class="form-label">Insira um fator de margem (opcional):</b>
-          <input class="form-control" id="margem" placeholder="0,5" step="0.01" type="number"/>
-        </div>
-      </div>
-
+      
       <div class="text-start" id="div_totais_atual">
         
       </div>
       
+      <div class="text-start" id="div_totais_analise">
+        
+      </div>
+
       <div>
-        <table id="tabela_processamento" class="table table-striped-columns">
+        <h5>Notícias relevantes</h5>
+        <table id="tabela_processamento1" class="table table-striped-columns">
           <thead>
             <td class="table-dark">ID</td>
             <th class="table-dark">SITE</th>
             <th class="table-dark">NOTICIA</th>
-            <th class="table-dark">RÓTULO MANUAL</th>
-            <th class="table-dark">CLASSIF. LIMIAR</th>
-            <th class="table-dark">PONTUAÇÕES</th>
+            <th class="table-dark">LINK</th>
+            <th class="table-dark">PONTUAÇÃO REF.REAL</th>
+            <th class="table-dark">PONTUAÇÃO REF.NÃO REAL</th>
             <th class="table-dark">ANÁLISE</th>
+            <th class="table-dark">CLASSIFICADORES</th>
           </thead>
           <tbody>
           </tbody>
         </table>
+
+        <h5>Notícias sobre outros assuntos</h5>
+        <table id="tabela_processamento2" class="table table-striped-columns">
+          <thead>
+            <td class="table-dark">ID</td>
+            <th class="table-dark">SITE</th>
+            <th class="table-dark">NOTICIA</th>
+            <th class="table-dark">LINK</th>
+            <th class="table-dark">PONTUAÇÃO REF.REAL</th>
+            <th class="table-dark">PONTUAÇÃO REF.NÃO REAL</th>
+            <th class="table-dark">ANÁLISE</th>
+            <th class="table-dark">CLASSIFICADORES</th>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+
       </div>
   </div>
-
-  <!-- Modal de graficos de matriz de confusão -->
-  <div class="modal fade" data-toggle="modal" data-backdrop="static" data-keyboard="false" id="modal_matriz_confusao" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h1 class="modal-title fs-5"> <b>Matriz de confusão</b> </h1>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div class="row"></div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal de pontuações -->
-  <div class="modal fade" data-toggle="modal" data-backdrop="static" data-keyboard="false" id="modal_pontuacoes" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h1 class="modal-title fs-5"> <b>Pontuações desta rodada de execuções</b> </h1>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
+  
   <!-- Modal de histórico -->
   <div class="modal fade" data-toggle="modal" data-backdrop="static" data-keyboard="false" id="modal_historico" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">

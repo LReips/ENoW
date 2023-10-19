@@ -19,7 +19,7 @@ import spacy
 from spacy_wordnet.wordnet_annotator import WordnetAnnotator 
 
 import nlpaug.augmenter.word as naw
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer,TfidfTransformer,CountVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.naive_bayes import MultinomialNB
@@ -30,6 +30,9 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, mean_squared_error
 from imblearn.over_sampling import RandomOverSampler, SMOTE, ADASYN
+from sklearn.metrics.pairwise import cosine_similarity
+from scipy import sparse
+
 
 #Importações django
 from django.conf import settings
@@ -66,19 +69,6 @@ class Classificador:
     self.nlp_spacy = spacy.load('pt_core_news_lg')
     if 'spacy_wordnet' not in self.nlp_spacy.pipe_names:
       self.nlp_spacy.add_pipe("spacy_wordnet")
-
-    self.aug = naw.SynonymAug(aug_src='wordnet')
-    self.minority_texts = [
-      'Caravelas-Portuguesas Causam Preocupação no Litoral Brasileiro',
-      'Um fenômeno surpreendente de caravelas-portuguesas tem causado preocupação nas praias do litoral brasileiro neste verão. O aumento significativo na presença desses cnidários peçonhentos levou a um aumento nos casos de ferimentos entre os banhistas.',
-      'De acordo com relatórios do Corpo de Bombeiros, mais de 31 mil banhistas foram atendidos em postos salva-vidas apenas nos últimos 20 dias devido a queimaduras causadas pelas caravelas-portuguesas. A equipe de resgate considera essa temporada de verão "atípica" devido ao alto número de incidentes.',
-      'As caravelas-portuguesas, conhecidas por sua cor arroxeada e uma crista bolhosa preenchida com ar, carregam toxinas potentes que causam dores intensas, queimaduras de terceiro grau e reações alérgicas em casos extremos. Embora a presença dessas criaturas marinhas tenha sido registrada em menor número em praias de Santa Catarina e do Paraná, seus efeitos têm sido preocupantes.',
-      'Especialistas acreditam que esse aumento inesperado pode estar relacionado a um desequilíbrio ecológico ou a fatores como correntes marítimas, altas temperaturas e a redução de predadores naturais, como a pesca excessiva.',
-      'Bandeiras lilás têm sido usadas em toda a costa para alertar os banhistas sobre a presença incomum de animais marinhos. A Sociedade Brasileira de Salvamento Aquático (Sobrasa) também emitiu diretrizes sobre como lidar com ferimentos causados por caravelas-portuguesas, incluindo a aplicação de ácido acético e a busca por atendimento médico em casos graves.',
-      'Apesar do aumento de casos, especialistas e autoridades estão trabalhando para garantir a segurança dos banhistas e compreender melhor os fatores por trás desse fenômeno incomum.'
-    ]
-
-    self.synthetic_texts = [self.aug.augment(text) for text in self.minority_texts]
   
   def noneToStr(self, val):
     if val is None:
@@ -104,23 +94,12 @@ class Classificador:
         filtrado.append(token.lemma_)
 
     return ' '.join(filtrado)
-  
-  def testar_sbert(self, texto1, texto2):
-    model = sentence_transformers.SentenceTransformer('all-MiniLM-L6-v2')
-    emb1 = model.encode(texto1)
-    emb2 = model.encode(texto2)
 
-    cos_sim = sentence_transformers.util.cos_sim(emb1, emb2)
-    score = cos_sim[0][0]
-    return decimal.Decimal('{:.4f}'.format(score))
-  
-  def executar_classificacao_modelos(self, dados, rodar_matplot = False):
+  def executar_classificacao_modelos(self, dados_teste):
     #Adicionando dados
-    dados['texto'] = np.concatenate((self.minority_texts, dados['texto']))
-    dados['label'] = np.concatenate(( [1] * len(self.minority_texts) , dados['label']))
 
     # Criar um DataFrame a partir dos dados
-    df = pd.DataFrame(dados)
+    df = pd.DataFrame(dados_teste)
 
     # Vetorização usando TF-IDF
     tfidf_vectorizer = TfidfVectorizer(max_df=0.8, min_df=0.1)
@@ -136,7 +115,6 @@ class Classificador:
     # Codificação de rótulos
     label_encoder = LabelEncoder()
     df['encoded_label'] = label_encoder.fit_transform(df['label'])
-
 
     # Divisão em treino, validação e teste (60%, 30%, 10%)
     X_train, X_temp, y_train, y_temp = train_test_split(df_tfidf, df['encoded_label'], test_size=0.4, random_state=42)
@@ -178,28 +156,126 @@ class Classificador:
         "f1_score": f"{f1:.4f}"
       }
 
-      if rodar_matplot:
-        matplotlib.use('agg')
+      matplotlib.use('agg')
 
-        # Matriz de confusão
-        cm = confusion_matrix(y_val, y_pred)
-        fig = matplotlib.pyplot.figure(figsize=(8, 6))
-        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=label_encoder.classes_, yticklabels=label_encoder.classes_)
-        matplotlib.pyplot.title(f"Matriz de Confusão - Modelo {name}")
-        matplotlib.pyplot.xlabel("Previsão")
-        matplotlib.pyplot.ylabel("Real")
+      # Matriz de confusão
+      cm = confusion_matrix(y_val, y_pred)
+      fig = matplotlib.pyplot.figure(figsize=(8, 6))
+      sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=label_encoder.classes_, yticklabels=label_encoder.classes_)
+      matplotlib.pyplot.title(f"Matriz de Confusão - Modelo {name}")
+      matplotlib.pyplot.xlabel("Previsão")
+      matplotlib.pyplot.ylabel("Real")
 
-        tmpfile = BytesIO()
-        fig.savefig(tmpfile, format='png')
-        encoded = base64.b64encode(tmpfile.getvalue()).decode('utf-8')
+      tmpfile = BytesIO()
+      fig.savefig(tmpfile, format='png')
+      encoded = base64.b64encode(tmpfile.getvalue()).decode('utf-8')
 
-        imagem = 'data:image/png;base64,{}'.format(encoded)
-        res['imagem'] = imagem
-        #plt.show()
+      imagem = 'data:image/png;base64,{}'.format(encoded)
+      res['imagem'] = imagem
       
       resultados.append(res)
     
     return resultados
+
+  def executar_classificacao_modelos2(self, dados_treino, dados_teste):
+     #Adicionando dados
+
+    # Criar um DataFrame a partir dos dados
+    df_treino = pd.DataFrame(dados_treino)
+    df_teste = pd.DataFrame(dados_teste)
+
+    # Vetorização usando TF-IDF
+    tfidf_vectorizer = TfidfVectorizer(max_df=0.8, min_df=0.1)
+    tfidf_matrix_treino = tfidf_vectorizer.fit_transform(df_treino['texto'])
+    tfidf_matrix_teste = tfidf_vectorizer.transform(df_teste['texto'])
+
+    # Tratamento de palavras raras ou frequentes
+    vocab = tfidf_vectorizer.get_feature_names_out()
+    df_tfidf_treino = pd.DataFrame(tfidf_matrix_treino.toarray(), columns=vocab)
+    df_tfidf_teste = pd.DataFrame(tfidf_matrix_teste.toarray(), columns=vocab)
+
+    # Tratamento de dados ausentes (usando substituição por zero como exemplo)
+    #df_tfidf_treino.fillna(0, inplace=True)
+    #df_tfidf_teste.fillna(0, inplace=True)
+
+    # Codificação de rótulos
+    label_encoder = LabelEncoder()
+    df_treino['encoded_label'] = label_encoder.fit_transform(df_treino['label'])
+
+    # Lista de modelos
+    models = [
+      ("Naive Bayes", MultinomialNB()),
+      ("Random Forest", RandomForestClassifier()),
+      ("MLP", MLPClassifier())
+    ]
+
+    resultados = {}
+    modelos_nomes = []
+
+    #Treinamento e avaliação dos modelos
+    for name, model in models:
+      model.fit(df_tfidf_treino, df_treino['label'])
+      y_pred = model.predict(df_tfidf_teste)
+
+      modelos_nomes.append(name)
+
+      if name not in resultados:
+        resultados[name] = []
+
+      resultados[name] = y_pred
+
+    return resultados, modelos_nomes
+
+  def calcular_tfidf(self, dados_limpos, dados_reais_treino, dados_falsos_treino):
+
+    #Preparando os dados
+    dados_reais = {'texto': []}
+    dados_nao_reais = {'texto': []}
+
+    for dado in dados_reais_treino:
+      dados_reais['texto'].append(dado)
+    
+    for dado in dados_falsos_treino:
+      dados_nao_reais['texto'].append(dado)
+
+    for dado in dados_limpos:
+      dados_reais['texto'].append(dado)
+      dados_nao_reais['texto'].append(dado)
+
+    idx_ult_real = len(dados_reais_treino)
+    idx_ult_nao_real = len(dados_falsos_treino)
+
+    tf_idf = TfidfVectorizer()
+    reais_tfidf = tf_idf.fit_transform(dados_reais['texto'])
+    nao_reais_tfidf = tf_idf.fit_transform(dados_nao_reais['texto'])
+
+    #Calculando o coseno e pegando apenas os dados adicionais (demais noticias)
+    reais = cosine_similarity(reais_tfidf)[idx_ult_real:]
+    nao_reais = cosine_similarity(nao_reais_tfidf)[idx_ult_nao_real:]
+    
+    noticias_classificadas = []
+    pontuacoes = []
+    for i in range(len(dados_limpos)):
+      real_coseno = 0
+      nao_real_coseno = 0
+      
+      #para cada noticia buscar o coseno calculado de cada noticia de referencia
+      for r in reais[i][:idx_ult_real]:
+        if r >= real_coseno:
+          real_coseno = r
+
+      for nr in nao_reais[i][:idx_ult_nao_real]:
+        if nr >= nao_real_coseno:
+          nao_real_coseno = nr
+      
+      pontuacoes.append({
+        'real': real_coseno, 'nao_real': nao_real_coseno 
+      })
+
+      noticias_classificadas.append(
+        1 if real_coseno > nao_real_coseno else 0
+      )
+    return noticias_classificadas, pontuacoes
 
 class ProcessamentoSrv:
   projeto = None
@@ -214,23 +290,59 @@ class ProcessamentoSrv:
     except Exception as e:
       return {"erro": str(e)}, 400
 
-  def buscar_noticias(self, projeto_id):
+  def buscar_noticias(self, projeto_id, id_processamento, filtrar_noticias):
+    def converter_para_json(noticias):
+      dados = []
+      for noticia in noticias:
+        dados.append({"id": noticia.id, "titulo": noticia.titulo, 
+                      "url": noticia.url, "site": noticia.site.nome})
+      return dados
+     
     try:
       self.projeto = Projeto.objects.get(pk=projeto_id)
 
-      def converter_para_json(noticias):
-        dados = []
-        for noticia in noticias:
-          dados.append({"id": noticia.id, "titulo": noticia.titulo, 
-                        "url": noticia.url, "site": noticia.site.nome})
-        return dados
+      if filtrar_noticias == '':
+        filtrar_noticias = []
+      else:     
+        filtrar_noticias = filtrar_noticias.split(',')
 
-      #Buscando notícias do projeto que não foram gravadas como reais
-      noticias = ConteudoNoticia.objects.select_related().filter(
-        projeto=self.projeto
-      ).order_by("id")
-      
-      dados = converter_para_json(noticias)
+      #Buscando notícias do projeto para serem usadas de referencia
+      cinco_melhores = []
+
+      if id_processamento != '' and id_processamento is not None:
+        noticias = ConteudoNoticia.objects.select_related().filter(
+          ~Q(pk__in=filtrar_noticias),
+          noticiareferenciaprocessamento__isnull=True,
+          noticiaresultadoprocessamento__processamento__id_processamento=id_processamento,
+          projeto=self.projeto
+        ).distinct().order_by("?")[:10]
+
+        excluir = [noticia.id for noticia in noticias]
+
+        #Pegar 5 noticias com pontuacao mais alta e rotuladas como verdadeira
+        melhores = ConteudoNoticia.objects.select_related().filter(
+          ~Q(pk__in=filtrar_noticias + excluir), projeto=self.projeto,
+          noticiaresultadoprocessamento__rotulo_calculado='REAL',
+          noticiaresultadoprocessamento__processamento__id_processamento=id_processamento
+        ).order_by("-noticiaresultadoprocessamento__pontuacao_real")
+        
+        #Filtrando as cinco melhores de maneira distinta
+        filtradas = []
+        for melhor in melhores:
+          if melhor.id not in filtradas:
+            cinco_melhores.append(melhor)
+            filtradas.append(melhor.id)
+          if len(filtradas) == 5:
+            break
+        
+        n = 10 - len(filtradas)
+        noticias = noticias[:n]
+      else:
+        noticias = ConteudoNoticia.objects.select_related().filter(
+          ~Q(pk__in=filtrar_noticias), projeto=self.projeto
+        ).order_by("?")[:10]
+
+      dados = converter_para_json(noticias) + converter_para_json(cinco_melhores)
       return dados, 200
     except Exception as e:
       return {"erro": str(e)}, 400
@@ -247,35 +359,44 @@ class ProcessamentoSrv:
       historico = []
       for resultado in resultados:
         dado = {
-          'limiar': resultado.limiar,
-          'margem': resultado.margem,
-          'limiar_ajustado': resultado.limiar_ajustado,
+          'modelos_reais': [],
+          'modelos_calculados': [],
+          'noticias': [],
           'acuracia': resultado.acuracia,
           'precisao': resultado.precisao,
           'recall': resultado.recall,
-          'f1_score': resultado.f1_score,
-          'modelos_reais': [],
-          'modelos_calculados': [],
-          'noticias': []
+          'f1_score': resultado.f1_score
         }
 
         modelos = ClassificacaoModelo.objects.filter(processamento=resultado)
         for modelo in modelos:
-          idx = 'modelos_reais'
-          if modelo.tipo_metrica == 'CALCULADA':
-            idx = 'modelos_calculados'
-
-          dado[idx].append({
+          dado['modelos_calculados'].append({
             'modelo': modelo.modelo,
             'acuracia': modelo.acuracia,
             'precisao': modelo.precisao,
             'recall': modelo.recall,
-            'f1_score': modelo.f1_score
+            'f1_score': modelo.f1_score,
+            'vp': modelo.vp,
+            'vn': modelo.vp,
+            'fp': modelo.vp,
+            'fn': modelo.fn,
           })
 
-        for noticia in resultado.noticias_referencias.all():
+        modelos = ClassificacaoModelo.objects.filter(projeto=self.projeto)
+        for modelo in modelos:
+          dado['modelos_reais'].append({
+            'modelo': modelo.modelo,
+            'acuracia': modelo.acuracia,
+            'precisao': modelo.precisao,
+            'recall': modelo.recall,
+            'f1_score': modelo.f1_score,
+            'imagem': modelo.matriz_confusao
+          })
+
+        noticias_referencia = NoticiaReferenciaProcessamento.objects.select_related().filter(processamento=resultado)
+        for ref in noticias_referencia:
           dado['noticias'].append({
-            'id': noticia.id, 'site': noticia.site.nome, 'titulo': noticia.titulo 
+            'id': ref.noticia.id, 'site': ref.noticia.site.nome, 'titulo': ref.noticia.titulo , 'tipo': ref.noticia_real
           })
 
         historico.append(dado)
@@ -284,279 +405,259 @@ class ProcessamentoSrv:
     except Exception as e:
       return {'erro': str(e)}, 400
 
-  def carregar_pontuacoes(self, projeto_id, id_processamento, noticia_id):
-    try:
-      self.projeto = Projeto.objects.get(pk=projeto_id)
-
-      res_proc = ResultadoProcessamento.objects.filter(projeto=self.projeto,id_processamento=id_processamento).values('noticias_referencias')
-      ref = [r['noticias_referencias'] for r in res_proc]
-
-      dados = ProcessamentoSbert.objects.select_related().filter(projeto=self.projeto, noticia__pk=noticia_id, noticia_referencia__pk__in=ref)
-      pontuacoes = []
-
-      for dado in dados:
-        pontuacoes.append({
-          'id': dado.noticia_referencia.id,
-          'noticia': dado.noticia_referencia.titulo,
-          'site': dado.noticia_referencia.site.nome,
-          'pontuacao': str(dado.pontuacao)
-        })
-
-      return pontuacoes, 200
-    except Exception as e:
-      return {'erro': str(e)}, 400
-
   def processar(self, post_data):
+    def calcular_totais(rotulos_reais, rotulos_calculados):
+      qtd_acertos = 0
+      vp = 0 #Verdadeiro positivo
+      vn = 0 #verdadeiro negativo
+      fp = 0 #Falso positivo
+      fn = 0 #Falso negativo
+      for idx, r in enumerate(rotulos_reais):
+        qtd_acertos += 1 if r == rotulos_calculados[idx] else 0
+        
+        vp += 1 if r == rotulos_calculados[idx] and r == 1 else 0
+        vn += 1 if r == rotulos_calculados[idx] and r == 0 else 0
+
+        fp += 1 if r == 0 and rotulos_calculados[idx] == 1 else 0
+        fn += 1 if r == 1 and rotulos_calculados[idx] == 0 else 0
+
+      acuracia = 0 if len(rotulos_reais) == 0 else round(qtd_acertos / len(rotulos_reais), n_decimais)
+      precisao = 0 if (vp + fp) == 0 else round(vp / (vp + fp), n_decimais)
+      recall   = 0 if (vp + fn) == 0 else round(vp / (vp + fn), n_decimais)
+      f1_score = 0 if (precisao + recall) == 0 else round( 2 * ((precisao * recall) / (precisao + recall)) , n_decimais)
+
+      return acuracia, precisao, recall, f1_score, vp, vn, fp, fn
+    
     def gerar_id():
       return str(datetime.now().timestamp())
+    
+    resultados = {}
     
     rotulos_projeto = {}
     if str(self.projeto.id) in ROTULOS_NOTICIAS:
       rotulos_projeto = ROTULOS_NOTICIAS[str(self.projeto.id)]
 
+    id_processamento = post_data.get('id_processamento', None)
+    noticias_reais_id = post_data.get('noticias_reais', [])
+    noticias_falsas_id = post_data.get('noticias_falsas', [])
+    salvar_noticias = post_data.get('salvar_noticias', 'N') == 'S'
     n_decimais = 4
 
-    id_processamento = post_data.get('id_processamento', None)
-    noticias_ref_id = post_data.get('noticias', [])
-    salvar_noticias = post_data.get('salvar_noticias', 'N')
-
-    margem = decimal.Decimal(post_data.get('margem', 0.5))
-    margem = round(margem, n_decimais)
-
-    resultados = {
-      'id_processamento': None, 'noticias_prox_limar': [],
-      'limiar': '', 'margem': margem, 'limiar_ajustado': ''
-    }
-
-    limiar = None
-
-    #Pegar informacoes do ultimo processamento desta sessão------------------------------
-    if id_processamento is None:
-      sessao = ResultadoProcessamento()
-      sessao.id_processamento = id_processamento = gerar_id()
-    else:
-      sessao = ResultadoProcessamento.objects.filter(id_processamento=id_processamento).order_by('-criado_em')
-      sessao = sessao.first()
-      limiar = sessao.limiar_ajustado
-
+    if id_processamento == '':
+      id_processamento = gerar_id()
+    
     resultados['id_processamento'] = id_processamento
- 
+
     classificador = Classificador()
 
     #Buscando todas as noticias do projeto
     noticias = ConteudoNoticia.objects.select_related().filter(projeto=self.projeto)
 
     #Buscando as noticias de referencia
-    noticias_ref = ConteudoNoticia.objects.filter(projeto=self.projeto, pk__in=noticias_ref_id)
+    noticias_reais_ref = ConteudoNoticia.objects.select_related().filter(projeto=self.projeto, pk__in=noticias_reais_id)
+
+    #Buscando as noticias de referencia
+    noticias_falsas_ref = ConteudoNoticia.objects.select_related().filter(projeto=self.projeto, pk__in=noticias_falsas_id)
 
     #Fazendo a limpeza da lista com todas as noticias, rotulando e pontuando------------------------------
-    #print("LIMPANDO AS NOTICIAS------------")
-    dados_limpos = []
+    dados_limpos_todas_noticias = []
+    rotulos_reais_todas_noticias = []
+    classificacoes = []
 
-    for noticia in noticias:
+    t1 = Temporizador()
+
+    for idx, noticia in enumerate(noticias):
       texto_limpo = classificador.ajustar_texto(
         noticia.titulo + ' ' + classificador.noneToStr(noticia.descricao) + ' ' + classificador.noneToStr(noticia.conteudo)
       )
-      
-      dados_limpos.append(texto_limpo)
-    
-    #print("FAZENDO AS PONTUACOES------------")
-    for ref in noticias_ref:
-      #limpando a noticia de referencia
-      texto_limpo = classificador.ajustar_texto(
-        ref.titulo + ' ' + classificador.noneToStr(ref.descricao) + ' ' + classificador.noneToStr(ref.conteudo)
-      )
-      
-      #Pontuando as notícias
-      for idx, noticia in enumerate(noticias):
-        pontuacao = classificador.testar_sbert(dados_limpos[idx], texto_limpo)
-
-        existe = ProcessamentoSbert.objects.filter(noticia__projeto=self.projeto,noticia_referencia=ref,noticia=noticia)
-
-        #Gravando a pontuacao
-        if len(existe) > 0:
-          #Registro ja existe
-          obj = existe.first()
-        else:
-          #Novo registro
-          obj = ProcessamentoSbert()
-          obj.noticia = noticia
-          obj.noticia_referencia = ref
-          obj.projeto = self.projeto
-
-        obj.pontuacao = pontuacao
-        obj.save()
-   
-    #Calculando classificacoes e totais------------------------------
-
-    #Se não houver um limiar ajustado da ultima execução, calcular um baseado nas pontuacoesdesta execução
-    #print("CALCULANDO OU BUSCANDO O LIMIAR------------")
-    if limiar is None:
-      limiar = decimal.Decimal(0.6)
-      #limiar = ProcessamentoSbert.objects.filter(
-      #  projeto=self.projeto, noticia_referencia__in=noticias_ref_id
-      #).aggregate(Avg("pontuacao"))['pontuacao__avg']
-
-    limiar = round(limiar, n_decimais)
-    resultados['limiar'] = limiar
-
-    #Guardar os rotulos gerados pelos calculos
-    #print("CLASSIFICANDO AS NOTICIAS E SALVANDO------------")
-    rotulos_classificados_limiar = []
-    classificacoes = []
-    rotulos_reais = []
-
-    #Buscando 10 noticias perto do limiar (maiores e menores)
-    n1 = ProcessamentoSbert.objects.select_related().filter(
-      ~Q(noticia__pk__in=noticias_ref_id),
-      projeto=self.projeto, noticia_referencia__in=noticias_ref_id,
-      pontuacao__gte=limiar
-    ).order_by('pontuacao').values('noticia_id').distinct()[:5]
-
-    n1 = [n['noticia_id'] for n in n1] + noticias_ref_id
-
-    n2 = ProcessamentoSbert.objects.select_related().filter(
-      ~Q(noticia__pk__in=n1),
-      projeto=self.projeto, noticia_referencia__in=noticias_ref_id,
-      pontuacao__lt=limiar
-    ).order_by('-pontuacao').values('noticia_id').distinct()[:5]
-
-    n2 = [n['noticia_id'] for n in n2]
-
-    for noticia in noticias:
-      #Pesquisando as pontuações desta noticia e vendo qual passar pela margem e limiar
-      classif_limiar = len(ProcessamentoSbert.objects.filter(noticia=noticia, noticia_referencia__in=noticias_ref_id, pontuacao__gte=limiar)) > 0
-      rotulos_classificados_limiar.append(1 if classif_limiar else 0)
-      classif_limiar = 'REAL' if classif_limiar else 'FALSA'
-
-      if noticia.id in n1 or noticia.id in n2:
-        indicador = 'SIM' if noticia.id in n1 else 'NÃO'
-        resultados['noticias_prox_limar'].append({
-          'indicador': indicador, 'id': noticia.id, 'titulo': noticia.titulo, 'site': noticia.site.nome,
-          'url': noticia.url
-        })
 
       rotulo = 'SEM RÓTULO'
       if str(noticia.id) in rotulos_projeto:
         rotulo = 'REAL' if rotulos_projeto[str(noticia.id)] else 'FALSA'
-      
-      rotulos_reais.append( 1 if rotulo == 'REAL' else 0 )
+
+      rotulos_reais_todas_noticias.append( 1 if rotulo == 'REAL' else 0 )
+      dados_limpos_todas_noticias.append(texto_limpo)
 
       classificacoes.append({
-        'id': noticia.id, 'titulo': noticia.titulo, 'site': noticia.site.nome,
-        'rotulo': rotulo, 'classificacao_limiar': classif_limiar
+        'id': noticia.id, 'titulo': noticia.titulo, 'site': noticia.site.nome, 'url': noticia.url,
+        'rotulo': rotulo, 'classificacao': '', 'idx_noticias': idx, 'pontuacao': '', 'modelos': ''
+      })
+    #Limpando o texto das noticias de referencias
+    dados_reais_treino = []
+    dados_falsos_treino = []
+
+    for noticia in noticias_reais_ref:
+      texto_limpo = classificador.ajustar_texto(
+        noticia.titulo + ' ' + classificador.noneToStr(noticia.descricao) + ' ' + classificador.noneToStr(noticia.conteudo)
+      )
+      dados_reais_treino.append(texto_limpo)
+      
+    for noticia in noticias_falsas_ref:
+      texto_limpo = classificador.ajustar_texto(
+        noticia.titulo + ' ' + classificador.noneToStr(noticia.descricao) + ' ' + classificador.noneToStr(noticia.conteudo)
+      )
+      dados_falsos_treino.append(texto_limpo)
+    
+    print("Limpeza:", t1.finalizar())
+
+    #Calculando a classificação via tf-idf
+
+    t1 = Temporizador()
+    rotulos_calculados, pontuacoes = classificador.calcular_tfidf(dados_limpos_todas_noticias, dados_reais_treino, dados_falsos_treino)
+    print("Calculo:", t1.finalizar())
+
+    #Calculando as métricas dos modelos com dados reais
+    t1 = Temporizador()
+
+    #Conferir se ja existe o resultado de aprendizado de maquina para este projeto com este numero de noticias
+    salvar_metricas_reais = False
+    dados_teste = {'texto': dados_limpos_todas_noticias, 'label': rotulos_reais_todas_noticias}
+
+    modelos_metricas_reais = ClassificacaoModelo.objects.filter(projeto=self.projeto, qtd_noticias=len(noticias))
+    if (len(modelos_metricas_reais) == 0):
+      salvar_metricas_reais = True
+      #Se não existir aprendizado de maquinas para este projeto com este numero de noticias então deve-se fazer um novo
+      resultados['modelos_metricas_reais'] = classificador.executar_classificacao_modelos(dados_teste)
+    else:
+      resultados['modelos_metricas_reais'] = []
+      for m in modelos_metricas_reais:
+        resultados['modelos_metricas_reais'].append({
+        "modelo": m.modelo,
+        "acuracia": f"{m.acuracia}",
+        "precisao": f"{m.precisao}",
+        "recall": f"{m.recall}",
+        "f1_score": f"{m.f1_score}",
+        "imagem": m.matriz_confusao
       })
       
-      #Salvando as noticias classificadas como reais
-      if salvar_noticias == 'S' and classif_limiar == 'REAL':
-        noticia_processada = NoticiaProcessada.objects.filter(noticia=noticia).first()
+    print("Modelos com rotulos reais:", t1.finalizar())
 
-        palavras_chaves = ''.join([p.palavra_chave for p in noticia.palavras_chaves.all()])
-        if noticia_processada is None:
-          #Adicionar noticia na base de noticias filtradas
-          noticia_processada = NoticiaProcessada.objects.create(noticia=noticia, palavras_chaves=palavras_chaves)
-        else:
-          #Atualizar caso tenha uma nova palavra-chave
-          noticia_processada.palavras_chaves = palavras_chaves
-          noticia_processada.save(update_fields=['palavras_chaves'])
+    t1 = Temporizador()
+    dados_treino = {
+      'texto': [t for t in dados_reais_treino] + [t for t in dados_falsos_treino],
+      'label': [1 for i in range(len(dados_reais_treino))] + [0 for i in range(len(dados_falsos_treino))],
+    }
+    modelos_metricas_calculadas, modelos_nomes = classificador.executar_classificacao_modelos2(dados_treino, dados_teste)
+    
+    print("Modelos com noticias de treino:", t1.finalizar())
 
-    noticias = []
+    #Retornando o resultado de cada rotulo para cada noticia
+    for idx, rotulo in enumerate(rotulos_calculados):
+      classificacoes[idx]['pontuacao_real'] = round(pontuacoes[idx]['real'],n_decimais)
+      classificacoes[idx]['pontuacao_nao_real'] = round(pontuacoes[idx]['nao_real'],n_decimais)
+      classificacoes[idx]['classificacao'] = 'REAL' if rotulo == 1 else 'FALSA'
 
-    #Calculando o limiar ajustado-----------------------------
-    #print("CALCULANDO O LIMIAR AJUSTADO------------")
-    pontuacoes = ProcessamentoSbert.objects.filter(
-      projeto=self.projeto, noticia_referencia__in=noticias_ref_id
-    )
-
-    soma_diff_quadrada = decimal.Decimal(0)
-    for pontuacao in pontuacoes:
-      soma_diff_quadrada += ((pontuacao.pontuacao - limiar) ** 2)
-
-    media_diff_quadrada = round(soma_diff_quadrada / len(pontuacoes), n_decimais)
-    desvio_padrao = round(math.sqrt(media_diff_quadrada),n_decimais)
-    limiar_ajustado = round(limiar + (margem * media_diff_quadrada), n_decimais)
-
-    resultados['limiar_ajustado'] = limiar_ajustado
-
-    #print("CALCULANDO AS METRICAS------------")
-
-    #Calculando acuracia, precisao, recall e f1-score----------------------
-    resultados['metricas_calculadas'] = classificador.executar_classificacao_modelos({'texto': dados_limpos, 'label': rotulos_classificados_limiar})
-    resultados['metricas_reais'] = classificador.executar_classificacao_modelos({'texto': dados_limpos, 'label': rotulos_reais}, True)
-
-    #Pegando as imagens dos graficos de matriz de confusão
-    #POR FAZER
+      modelos_string = ''
+      for modelo in modelos_nomes:
+        status = modelos_metricas_calculadas[modelo][idx]#'Real' if modelos_metricas_calculadas[modelo][idx] == 1 else 'Falsa'
+        modelos_string = modelos_string + '{}: {}<br>'.format(modelo, status)
+      classificacoes[idx]['classificadores'] = modelos_string
 
     #Calculando % de similaridade entre rotulos reais e rotulos calculados
     #print("CALCULANDO METRICAS DE ROTULOS REAIS X CALCULADOS------------")
-    qtd_acertos = 0
-    verdadeiro_positivo = 0
-    verdadeiro_negativo = 0
-    falso_positivo = 0
-    falsos_negativo = 0
-    for idx, r in enumerate(rotulos_reais):
-      igual = r == rotulos_classificados_limiar[idx]
-
-      qtd_acertos += 1 if igual else 0
-
-      verdadeiro_positivo += 1 if igual and r == 1 else 0
-      verdadeiro_negativo += 1 if igual and r == 0 else 0
-
-      falso_positivo += 1 if r == 0 and igual is False else 0
-      falsos_negativo += 1 if r == 1 and igual is False else 0
-
-    acuracia = round(qtd_acertos / len(rotulos_reais), n_decimais)
-    precisao = round(verdadeiro_positivo / (verdadeiro_positivo + falso_positivo), n_decimais)
-
-    recall = round(verdadeiro_positivo / (verdadeiro_positivo + falsos_negativo), n_decimais)
-    f1_score = round(2 * (precisao * recall) / (precisao + recall), n_decimais)
-
+    acuracia, precisao, recall, f1_score, vp_calc, vn_calc, fp_calc, fn_calc = calcular_totais(rotulos_reais_todas_noticias, rotulos_calculados)
+    
     resultados['acuracia'] = str(acuracia)
     resultados['precisao'] = str(precisao)
-    resultados['recall'] = str(recall)
-    resultados['f1_score'] = str(f1_score)    
+    resultados['recall']   = str(recall)
+    resultados['f1_score'] = str(f1_score)
+
+    resultados['modelos_rotulos_calculados'] = []
+    for modelo in modelos_metricas_calculadas:
+      acuracia, precisao, recall, f1_score, vp, vn, fp, fn = calcular_totais(rotulos_reais_todas_noticias, modelos_metricas_calculadas[modelo])
+
+      resultados['modelos_rotulos_calculados'].append({
+        "modelo": modelo,
+        "acuracia": f"{acuracia:.4f}",
+        "precisao": f"{precisao:.4f}",
+        "recall": f"{recall:.4f}",
+        "f1_score": f"{f1_score:.4f}",
+        "vp": vp, "vn": vn, "fp": fp, "fn": fn
+      })
 
     #Salvando os dados calculados
     #print("SALVANDO OS DADOS CALCULADOS------------")
     with transaction.atomic():
-      obj = ResultadoProcessamento()
-      obj.id_processamento = id_processamento
-      obj.projeto = self.projeto
-      obj.limiar = limiar
-      obj.margem = margem
-      obj.media_diff_quadrada = media_diff_quadrada
-      obj.desvio_padrao = desvio_padrao
-      obj.limiar_ajustado = limiar_ajustado
-      obj.acuracia = acuracia
-      obj.precisao = precisao
-      obj.recall = recall
-      obj.f1_score = f1_score
-      obj.save()
+      obj_processamento = ResultadoProcessamento()
+      obj_processamento.id_processamento = id_processamento
+      obj_processamento.projeto = self.projeto
+      obj_processamento.acuracia = acuracia
+      obj_processamento.precisao = precisao
+      obj_processamento.recall = recall
+      obj_processamento.vp = vp_calc
+      obj_processamento.vn = vn_calc
+      obj_processamento.fp = fp_calc
+      obj_processamento.fn = fn_calc
+      obj_processamento.save()
 
-      for ref in noticias_ref:
-        obj.noticias_referencias.add(ref)
+      for idx, classificacao in enumerate(classificacoes):
+        #Salvando as pontuacoes
+        noticia = noticias[classificacao['idx_noticias']]
+        
+        obj_nt = NoticiaResultadoProcessamento()
+        obj_nt.processamento = obj_processamento
+        obj_nt.noticia = noticia
+        obj_nt.rotulo_calculado = classificacao['classificacao']
+        obj_nt.rotulo_real = classificacao['rotulo']
+        obj_nt.classificadores = classificacao['classificadores'].replace('<br>', '\n')
+        obj_nt.pontuacao_real = pontuacoes[idx]['real']
+        obj_nt.pontuacao_nao_real = pontuacoes[idx]['nao_real']
+        obj_nt.save()
+      
+        #Salvando as noticias como processadas
+        if salvar_noticias:
+          if classificacao['classificacao'] == 'REAL':
+            noticia_processada = NoticiaProcessada.objects.filter(noticia=noticia).first()
+            palavras_chaves = ''.join([p.palavra_chave for p in noticia.palavras_chaves.all()])
+            if noticia_processada is None:
+              #Adicionar noticia na base de noticias filtradas
+              noticia_processada = NoticiaProcessada.objects.create(noticia=noticia, palavras_chaves=palavras_chaves)
+            else:
+              #Atualizar caso tenha uma nova palavra-chave
+              noticia_processada.palavras_chaves = palavras_chaves
+              noticia_processada.save(update_fields=['palavras_chaves'])
 
-      for modelo in resultados['metricas_calculadas']:
+      for ref in noticias_reais_ref:
+        obj1 = NoticiaReferenciaProcessamento()
+        obj1.processamento = obj_processamento
+        obj1.noticia = ref
+        obj1.noticia_real = 'S'
+        obj1.save()
+
+      for ref in noticias_falsas_ref:
+        obj2 = NoticiaReferenciaProcessamento()
+        obj2.processamento = obj_processamento
+        obj2.noticia = ref
+        obj2.noticia_real = 'N'
+        obj2.save()
+
+      for modelo in resultados['modelos_rotulos_calculados']:
         obj_modelo = ClassificacaoModelo()
-        obj_modelo.processamento = obj
+        obj_modelo.processamento = obj_processamento
         obj_modelo.modelo = modelo['modelo']
         obj_modelo.acuracia = modelo['acuracia']
         obj_modelo.precisao = modelo['precisao']
         obj_modelo.recall = modelo['recall']
         obj_modelo.f1_score = modelo['f1_score']
-        obj_modelo.tipo_metrica = 'CALCULADA'
+        obj_modelo.vp = modelo['vp']
+        obj_modelo.vn = modelo['vn']
+        obj_modelo.fp = modelo['fp']
+        obj_modelo.fn = modelo['fn']
+        obj_modelo.qtd_noticias = len(noticias)
         obj_modelo.save()
 
-      for modelo in resultados['metricas_reais']:
-        obj_modelo = ClassificacaoModelo()
-        obj_modelo.processamento = obj
-        obj_modelo.modelo = modelo['modelo']
-        obj_modelo.acuracia = modelo['acuracia']
-        obj_modelo.precisao = modelo['precisao']
-        obj_modelo.recall = modelo['recall']
-        obj_modelo.f1_score = modelo['f1_score']
-        obj_modelo.tipo_metrica = 'REAL'
-        obj_modelo.save()
+      if salvar_metricas_reais:
+        for modelo in resultados['modelos_metricas_reais']:
+          obj_modelo = ClassificacaoModelo()
+          obj_modelo.projeto = self.projeto
+          obj_modelo.modelo = modelo['modelo']
+          obj_modelo.acuracia = modelo['acuracia']
+          obj_modelo.precisao = modelo['precisao']
+          obj_modelo.recall = modelo['recall']
+          obj_modelo.f1_score = modelo['f1_score']
+          obj_modelo.qtd_noticias = len(noticias)
+          obj_modelo.matriz_confusao = modelo['imagem']
+          obj_modelo.save()
 
     return resultados, classificacoes
 

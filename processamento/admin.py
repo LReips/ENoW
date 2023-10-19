@@ -22,31 +22,19 @@ class NoticiaProcessadaAdmin(admin.ModelAdmin):
   
   def has_change_permission(self, request, obj=None):
     return False
-
-class NoticiaParecidaAdmin(admin.ModelAdmin):
-  list_filter = ('projeto', )
-  list_display = ('id', 'projeto', 'noticia_processada_a', 'noticia_processada_b', )
-
-  def has_add_permission(self, request, obj=None):
-    return False
   
-  def has_change_permission(self, request, obj=None):
-    return False
-
-class ProcessamentoSbertAdmin(admin.ModelAdmin):
-  list_filter = ('projeto', )
-  list_display = ('id', 'projeto', 'pontuacao', 'noticia', 'noticia_referencia')
-
 class ClassificacaoModeloInline(admin.StackedInline):
   extra = 0
   model = ClassificacaoModelo
 
+#class NoticiaReferenciaProcessamentoInline(admin.StackedInline):
+#  extra = 0
+#  model = NoticiaReferenciaProcessamento
+
 class ResultadoProcessamentoAdmin(admin.ModelAdmin):
   inlines = (ClassificacaoModeloInline, )
   list_filter = ('projeto', )
-  list_display = ('id_processamento', 'criado_em', 'projeto', 'limiar', 'margem', 'media_diff_quadrada', 'desvio_padrao', 'limiar_ajustado', 'acuracia', 'precisao', 'recall', 'f1_score')
+  list_display = ('id_processamento', 'criado_em', 'projeto', 'acuracia', 'precisao', 'recall', 'f1_score')
 
 admin.site.register(NoticiaProcessada, NoticiaProcessadaAdmin)
-admin.site.register(NoticiaParecida, NoticiaParecidaAdmin)
-admin.site.register(ProcessamentoSbert, ProcessamentoSbertAdmin)
 admin.site.register(ResultadoProcessamento, ResultadoProcessamentoAdmin)
