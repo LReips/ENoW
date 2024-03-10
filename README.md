@@ -8,26 +8,11 @@
       <div>
         <h4>Sumário</h4>
         <ul>
-          <li> <a href="#execucao">1. Execução do programa via cmd</a> </li>
-          <li> <a href="#estrutura_tabelas">2. Estrutura de tabelas</a> </li>
+          <li> <a href="#execucao">1. Estrutura de tabelas</a> </li>
           <li> <a href="#dados">3. Explicação dos dados</a> </li>
           <li> <a href="#estrutura_sistema">4. Estrutura do sistema</a> </li>
           <li> <a href="#execucao_via_site">5. Execução do programa via o site</a> </li>
         </ul>
-      </div>
-      <div id="execucao">
-        <h4>1. Execução do programa via cmd</h4>
-        <p>
-          Executar o programa usando o comando abaixo passando a(s) do(s) projeto(s) desejado(s):<br>
-          py main.py projeto_id (obrigatório) palavra_chave(opcional)<br>
-          Exemplos:<br>
-        </p>
-        <ul>
-          <li>py coletor_lib/main.py 1 (Executar projeto 1 com todas as palavras chaves vinculadas ao projeto)</li>
-          <li>py coletor_lib/main.py 2 3 (Executar projeto 2 com a palavra chave 3)</li>
-          <li>py coletor_lib/main.py 2,3 5 (Executar projeto 2 e 3 com a palavra chave 5)</li>
-        </ul>
-        Só será executado o programa cujo projeto estiver vinculado a uma determinada palavra chave.
       </div>
       <div id="estrutura_tabelas">
         <h4>2. Estrutura de tabelas</h4>
@@ -106,16 +91,19 @@
           O sistema esta estruturado da seguinte forma:
         </p>
         <ul>
-          <li>POR FAZER....</li>
+         ...
         </ul>
       </div>
       <div id="execucao_via_site">
         <h4>5. Execução do programa via o site</h4>
         <ul>
-          <li>1. pip install -r requirements.txt</li>
-          <li>2. py manage.py migrate</li>
-          <li>3. py manage.py createsuperuser</li>
-          <li>4. Executar o arquivo script.sql</li>
+          <li>1. Iniciar o serviço do docker (docker desktop via interface ou iniciar o serviço via cmd)</li>
+          <li>2. Modificar o arquivo example.env para .env e altera as informações de acesso</li>
+          <li>3. Executar o comando: docker compose build</li>
+          <li>4. Executar o comando: docker compose up -d</li>
+          <li>5. Executar o comando: docker compose run web python3 manage.py init_db (executar uma unica vez durante a instalação)</li>
+          <li>6. O site pode ser acessado via a url http://localhost:8000</li>
+          <li>7. O acesso se dará com usuário e senha informados na etapa 2</li>
         </ul>
       </div>
     </div>

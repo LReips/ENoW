@@ -1,7 +1,8 @@
 {% extends "coleta/template.html" %}
+{% load ft_traduzir %}
 {% load static %}
 
-{% block title %} Dashboard | Coleta de Notícias {% endblock %}
+{% block title %} Dashboard | {% ft_traduzir 'Coleta de Notícias' %} {% endblock %}
 {% block subtitle %} Dashboard | {{projeto.id}} - {{projeto.nome}}{% endblock %}
 
 {% block content %}
@@ -14,14 +15,19 @@
   <script src="{% static 'dashboard/datatables/DataTables-1.13.6/js/dataTables.bootstrap5.min.js' %}" ></script>
   <script src="{% static 'dashboard/datatables/FixedHeader-3.4.0/js/fixedHeader.bootstrap5.min.js' %}"></script>
 
-  <script src="{% static 'dashboard/js/processamento.js' %}"></script>
+  
+  {% if idioma == 'pt-br' %}
+    <script src="{% static 'dashboard/js/processamento.js' %}"></script>
+  {% else %}
+    <script src="{% static 'dashboard/js/processamento_en.js' %}"></script>
+  {% endif %}
 
   <input type="hidden" id="projeto_id" value="{{projeto.id}}" />
 
   <div class="row">
     <div class="col card_col">
       <div style="margin-bottom: 13px;">
-        <h5>Notícias</h5>
+        <h5>{% ft_traduzir 'Notícias' %}</h5>
       </div> 
       
       <div>
@@ -29,9 +35,9 @@
           <thead>
             <td class="table-dark">ID</td>
             <th class="table-dark">SITE</th>
-            <th class="table-dark">NOTICIA</th>
+            <th class="table-dark">{% ft_traduzir 'NOTÍCIA' %}</th>
             <th class="table-dark">LINK</th>
-            <th class="table-dark">AÇÃO</th>
+            <th class="table-dark">{% ft_traduzir 'AÇÕES' %}</th>
           </thead>
           <tbody>
           </tbody>
@@ -55,25 +61,25 @@
       
       <div class="row text-start">
         <div class="input-group mb-3">
-          <label class="input-group-text" for="id_processamento">ID Processamento</label>
-          <input id="id_processamento" class="form-control" placeholder="Insira a ID de processamento (opcional)">
-          <button class="btn btn-secondary" style="margin: 0" id="carregar_processamento">Carregar processamento</button>
+          <label class="input-group-text" for="id_processamento">{% ft_traduzir 'ID Processamento' %}</label>
+          <input id="id_processamento" class="form-control" placeholder="{% ft_traduzir 'Insira a ID de processamento (opcional)' %}">
+          <button class="btn btn-secondary" style="margin: 0" id="carregar_processamento">{% ft_traduzir 'Carregar processamento' %}</button>
         </div>
       </div>
 
       <div style="margin-bottom: 13px;">
-        <button id="executar_processamento" class="btn btn-success">Executar processamento</button>
-        <button id="historico_processamento" class="btn btn-secondary">Ver histórico de processamento</button>
-        <button id="carregar_noticias" class="btn btn-secondary">Carregar outras notícias</button>
+        <button id="executar_processamento" class="btn btn-success">{% ft_traduzir 'Executar processamento' %}</button>
+        <button id="historico_processamento" class="btn btn-secondary">{% ft_traduzir 'Ver histórico de processamento' %}</button>
+        <button id="carregar_noticias" class="btn btn-secondary">{% ft_traduzir 'Carregar outras notícias' %}</button>
         <br>
-        <small>Ao fechar esta aba, este processamento será finalizado!</small>
+        <small>{% ft_traduzir 'Ao fechar esta aba, este processamento será finalizado!' %}</small>
       </div>
       
       <div class="row text-start">
         <div class="mb-3">
           <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" role="switch" id="salvar_noticias">
-            <label class="form-check-label" for="salvar_noticias">Salvar as notícias automaticamente?</label>
+            <label class="form-check-label" for="salvar_noticias">{% ft_traduzir 'Salvar as notícias automaticamente?' %}</label>
           </div>
         </div>
       </div>
@@ -87,33 +93,33 @@
       </div>
 
       <div>
-        <h5>Notícias relevantes</h5>
+        <h5>{% ft_traduzir 'Notícias relevantes' %}</h5>
         <table id="tabela_processamento1" class="table table-striped-columns">
           <thead>
             <td class="table-dark">ID</td>
             <th class="table-dark">SITE</th>
-            <th class="table-dark">NOTICIA</th>
+            <th class="table-dark">{% ft_traduzir 'NOTÍCIA' %}</th>
             <th class="table-dark">LINK</th>
-            <th class="table-dark">PONTUAÇÃO REF.REAL</th>
-            <th class="table-dark">PONTUAÇÃO REF.NÃO REAL</th>
-            <th class="table-dark">ANÁLISE</th>
-            <th class="table-dark">CLASSIFICADORES</th>
+            <th class="table-dark">{% ft_traduzir 'PONTUAÇÃO REF.REAL' %}</th>
+            <th class="table-dark">{% ft_traduzir 'PONTUAÇÃO REF.NÃO REAL' %}</th>
+            <th class="table-dark">{% ft_traduzir 'ANÁLISE' %}</th>
+            <th class="table-dark">{% ft_traduzir 'CLASSIFICADORES' %}</th>
           </thead>
           <tbody>
           </tbody>
         </table>
 
-        <h5>Notícias sobre outros assuntos</h5>
+        <h5>{% ft_traduzir 'Notícias sobre outros assuntos' %}</h5>
         <table id="tabela_processamento2" class="table table-striped-columns">
           <thead>
             <td class="table-dark">ID</td>
             <th class="table-dark">SITE</th>
-            <th class="table-dark">NOTICIA</th>
+            <th class="table-dark">{% ft_traduzir 'NOTÍCIA' %}</th>
             <th class="table-dark">LINK</th>
-            <th class="table-dark">PONTUAÇÃO REF.REAL</th>
-            <th class="table-dark">PONTUAÇÃO REF.NÃO REAL</th>
-            <th class="table-dark">ANÁLISE</th>
-            <th class="table-dark">CLASSIFICADORES</th>
+            <th class="table-dark">{% ft_traduzir 'PONTUAÇÃO REF.REAL' %}</th>
+            <th class="table-dark">{% ft_traduzir 'PONTUAÇÃO REF.NÃO REAL' %}</th>
+            <th class="table-dark">{% ft_traduzir 'ANÁLISE' %}</th>
+            <th class="table-dark">{% ft_traduzir 'CLASSIFICADORES' %}</th>
           </thead>
           <tbody>
           </tbody>
@@ -127,14 +133,14 @@
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header">
-          <h1 class="modal-title fs-5"> <b>Histórico de processamento</b> </h1>
+          <h1 class="modal-title fs-5"> <b>{% ft_traduzir 'Histórico de processamento' %}</b> </h1>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
 
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% ft_traduzir 'Fechar' %}</button>
         </div>
       </div>
     </div>

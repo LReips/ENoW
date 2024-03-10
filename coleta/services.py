@@ -129,7 +129,7 @@ class Coleta:
       lista_estruturas = EstruturaNoticia.objects.filter(inicio_estrutura_noticia=init_estrutura)
       if len(lista_noticias) == 0 or lista_noticias is None:
         return False
-
+      
       for noticia in lista_noticias:
 
         #Objeto que reterá os dados da noticia
@@ -145,7 +145,7 @@ class Coleta:
 
         if noticia_obj.noticia.titulo == '' or noticia_obj.noticia.titulo is None:
           continue
-
+        
         #Acessando a pagina da noticia
         if noticia_obj.noticia.url != "" and self.site_atual.acessar_pagina_interna == 'S':
           try:
@@ -191,7 +191,7 @@ class Coleta:
       if self.coletar_noticias_site(conteudo_site) is False:
         if paginacao == 1:
           print("NOTICIAS NAO ENCONTRADAS", self.site_atual.nome)
-          self.registrar_erro('Site sem notícias')
+          self.registrar_erro(traduzir('Site sem notícias'))
           break
         else:
           break
@@ -199,7 +199,7 @@ class Coleta:
       #Pegando a proxima url baseado na paginação
       tag_paginacao = conteudo_site.findAll(json_args['tag'], json_args['attr'])
       if len(tag_paginacao) == 0:
-        self.registrar_erro('Erro na paginação, loop: ' + str(paginacao))
+        self.registrar_erro(traduzir('Erro na paginação, loop: ') + str(paginacao))
         break
 
       if json_args['subtag'] != "":
@@ -221,6 +221,8 @@ class Coleta:
       temp_site_url = self.site_atual.url.format(
         palavra_chave = self.palavra_chave_atual.palavra_chave, pagina = paginacao
       )
+
+      print(temp_site_url)
       
       #Requisitando o html do site
       response = requests.get(str(temp_site_url), headers={"User-Agent": "XY"})
@@ -230,14 +232,15 @@ class Coleta:
         if paginacao > 1:
           break
         else:
-          raise requests.exceptions.RequestException
+          self.registrar_erro(traduzir('Site (página) não encontrada!'))
+          break
       
       #Convertando o html para objeto manipulavel
       conteudo_site = BeautifulSoup(response.content, 'html.parser')
       if self.coletar_noticias_site(conteudo_site) is False:
         if paginacao == 1:
           print("NOTICIAS NAO ENCONTRADAS", self.site_atual.nome)
-          self.registrar_erro('Site sem notícias')
+          self.registrar_erro(traduzir('Site sem notícias'))
           break
         else:
           break
@@ -329,9 +332,8 @@ class Coleta:
             self.paginacao_url()
           else:
             self.sem_paginacao()
-        except requests.exceptions.RequestException as e:
-          resultado = False
-          self.registrar_erro('Erro no requesição da lista de noticias')
+        except Exception as e:
+          self.registrar_erro(traduzir('Erro no requisição da lista de noticias'))
       
     self.deletar_pasta_imagens_vazias()
     return resultado

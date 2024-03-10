@@ -1,6 +1,9 @@
 from django.contrib import admin
 from .models import *
 
+class EstadoAdmin(admin.ModelAdmin):
+  list_display = ('id', 'pais', 'nome')
+
 class ProjetoLocalInteresse(admin.StackedInline):
   model = LocalInteresse
 
@@ -21,6 +24,8 @@ class EstruturaNoticiaAdmin(admin.ModelAdmin):
 class ConteudoNoticiaAdmin(admin.ModelAdmin):
   list_filter = ('site', )
 
+admin.site.register(Estado, EstadoAdmin)
+admin.site.register(Cidade)
 admin.site.register(Projeto, ProjetoAdmin)
 admin.site.register(SiteNoticia, SiteNoticiaAdmin)
 admin.site.register(InitEstruturaNoticia, InitEstruturaNoticiaAdmin)

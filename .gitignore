@@ -1,7 +1,8 @@
 imagens_coletor/
-coletas/
 testes.txt
+teste.py
 teste.PNG
+resultado_processamento.csv
 
 # Django #
 *.log

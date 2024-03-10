@@ -1,7 +1,8 @@
 {% extends "coleta/template.html" %}
+{% load ft_traduzir %}
 {% load static %}
 
-{% block title %} Dashboard | Coleta de Notícias {% endblock %}
+{% block title %} Dashboard | {% ft_traduzir 'Coleta de Notícias' %} {% endblock %}
 {% block subtitle %} Dashboard | {{projeto.id}} - {{projeto.nome}}{% endblock %}
 
 {% block content %}
@@ -13,14 +14,18 @@
   <script src="{% static 'dashboard/datatables/DataTables-1.13.6/js/dataTables.bootstrap5.min.js' %}" ></script>
   <script src="{% static 'dashboard/datatables/FixedHeader-3.4.0/js/fixedHeader.bootstrap5.min.js' %}"></script>
 
-  <script src="{% static 'dashboard/js/projeto.js' %}"></script>
+  {% if idioma == 'pt-br' %}
+    <script src="{% static 'dashboard/js/projeto.js' %}"></script>
+  {% else %}
+    <script src="{% static 'dashboard/js/projeto_en.js' %}"></script>
+  {% endif %}
 
   <input type="hidden" id="projeto_id" value="{{projeto.id}}" />
 
   <div class="row">
     <div class="col card_col">
       <div style="margin-bottom: 13px;">
-        <a href="{% url 'dashboard:processamento' projeto_id=projeto.id %}" target="_blank" class="btn btn-primary">Executar processamento de notícias</a>
+        <a href="{% url 'dashboard:processamento' projeto_id=projeto.id %}" target="_blank" class="btn btn-primary">{% ft_traduzir 'Executar processamento de notícias' %}</a>
       </div>
     </div>
   </div>
@@ -29,7 +34,7 @@
     <div class="row">
       <div class="col card_col">
         <div style="margin-bottom: 13px;">
-          Palavra-chave: <b>{{chave.chave}}</b>
+          {% ft_traduzir 'Palavra-chave' %}: <b>{{chave.chave}}</b>
         </div> 
   
         <div class="row">
@@ -40,7 +45,7 @@
             </div>
 
             {% empty %}
-              <h3>O projeto não possui sites vinculados!</h3>
+              <h3>{% ft_traduzir 'O projeto não possui sites vinculados!' %}</h3>
   
           {% endfor %}
         </div>
@@ -49,24 +54,24 @@
     </div>
 
     {% empty %}
-      <h3>O projeto não possui palavras-chaves vinculadas!</h3>
+      <h3>{% ft_traduzir 'O projeto não possui palavras-chaves vinculadas!' %}</h3>
 
   {% endfor %}
 
   <div class="row">
     <div class="col card_col">
       <div style="margin-bottom: 13px;">
-        <b>Notícias gravadas (processadas):</b>
+        <b>{% ft_traduzir 'Notícias gravadas (processadas)' %}:</b>
       </div> 
       
       <div>
         <table class="table table-striped-columns" id="tabela_noticias_processadas">
           <thead>
-            <th class="table-dark">ID</th>
-            <th class="table-dark">SITE</th>
-            <th class="table-dark">TITULO</th>
-            <th class="table-dark">URL</th>
-            <th class="table-dark">AÇÕES</th>
+            <th class="table-dark">ID    </th>
+            <th class="table-dark">SITE  </th>
+            <th class="table-dark">{% ft_traduzir 'TÍTULO' %}</th>
+            <th class="table-dark">URL   </th>
+            <th class="table-dark">{% ft_traduzir 'AÇÕES' %} </th>
           </thead>
           <tbody>
             {% for noticia_processada in noticias_processadas %}
@@ -75,8 +80,8 @@
                 <td>{{noticia_processada.noticia.id}}</td>
                 <td>{{noticia_processada.noticia.site.nome}}</td>
                 <td>{{noticia_processada.noticia.titulo}}</td>
-                <td> <a class="btn btn-info btn-sm" href="{{noticia_processada.noticia.url}}" target="_blank">Acessar</a> </td>
-                <td> <button class="btn btn-danger btn-sm deletar_noticia_processada" value="{{noticia_processada.id}}" target="_blank">Deletar</button> </td>
+                <td> <a class="btn btn-info btn-sm" href="{{noticia_processada.noticia.url}}" target="_blank">{% ft_traduzir 'Acessar' %}</a> </td>
+                <td> <button class="btn btn-danger btn-sm deletar_noticia_processada" value="{{noticia_processada.id}}" target="_blank">{% ft_traduzir 'Deletar' %}</button> </td>
               </tr>
               
             {% endfor %}

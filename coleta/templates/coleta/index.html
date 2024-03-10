@@ -1,23 +1,29 @@
 {% extends "coleta/template.html" %}
+{% load ft_traduzir %}
 {% load static %}
 
-{% block title %} Página de Coleta | Coleta de Notícias {% endblock %}
-{% block subtitle %} Página de Coleta | Coleta de Notícias {% endblock %}
+{% block title %} {% ft_traduzir 'Página de Coleta' %} | {% ft_traduzir 'Coleta de Notícias' %} {% endblock %}
+{% block subtitle %} {% ft_traduzir 'Página de Coleta' %} | {% ft_traduzir 'Coleta de Notícias' %} {% endblock %}
 
 {% block content %}
 
-  <script src="{% static 'coleta/js/index.js' %}"></script>
-  <h1>Projetos</h1>
+  {% if idioma == 'pt-br' %}
+    <script src="{% static 'coleta/js/index.js' %}"></script>
+  {% else %}
+    <script src="{% static 'coleta/js/index_en.js' %}"></script>
+  {% endif %}
+  
+  <h1>{% ft_traduzir 'Projetos' %}</h1>
   
   {% for projeto in projetos %}
     <div class="row">
       <div class="col card_col">
         <div>
-          {{ projeto }} <button data-projeto="{{projeto.id}}" class="btn btn-outline-primary coletar_btn">Coletar dados</button>
+          {{ projeto }} <button data-projeto="{{projeto.id}}" class="btn btn-outline-primary coletar_btn">{% ft_traduzir 'Coletar dados' %}</button>
         </div> 
 
         <div>
-          <a  target="_blank" class="btn btn-outline-success" href="{% url 'dashboard:projeto' projeto_id=projeto.id %}">Acessar o projeto</a> 
+          <a  target="_blank" class="btn btn-outline-success" href="{% url 'dashboard:projeto' projeto_id=projeto.id %}">{% ft_traduzir 'Acessar o projeto' %}</a> 
         </div>
 
         <ul class="lista_interna">
@@ -25,7 +31,7 @@
             <li>
               <div>
                 {{palavra_chave.palavra_chave}} 
-                <button data-projeto="{{projeto.id}}" data-palavra_chave="{{palavra_chave.id}}" class="btn btn-outline-primary coletar_btn">Coletar dados</button>
+                <button data-projeto="{{projeto.id}}" data-palavra_chave="{{palavra_chave.id}}" class="btn btn-outline-primary coletar_btn">{% ft_traduzir 'Coletar dados' %}</button>
               </div>
             </li>
           {% endfor %}
@@ -34,7 +40,7 @@
     </div>
 
   {% empty %}
-    <h3>Nenhum projeto foi encontrado!</h3>
+    <h3>{% ft_traduzir 'Nenhum projeto foi encontrado!' %}</h3>
 
   {% endfor %}
 

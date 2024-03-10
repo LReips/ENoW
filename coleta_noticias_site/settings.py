@@ -85,12 +85,12 @@ WSGI_APPLICATION = 'coleta_noticias_site.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': env('DB'),
-        'USER': env('DB_USER'),
-        'PASSWORD': env('DB_PASS'),
-        'HOST': env('DB_HOST'),
-        'PORT': env('DB_PORT'),
-        'OPTIONS': {'charset': 'utf8mb4', 'sql_mode': 'traditional'},
+        'NAME': env('MYSQL_DATABASE'),
+        'USER': env('MYSQL_USER'),
+        'PASSWORD': env('MYSQL_PASSWORD'),
+        'HOST': 'db',
+        'PORT': env('MYSQL_TCP_PORT'),
+        'OPTIONS': {'charset': 'utf8mb4'},
     },
     'sqlite': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -121,9 +121,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/4.1/topics/i18n/
 
-LANGUAGE_CODE = 'pt-br'
+LANGUAGE_CODE = env('LANGUAGE_CODE')
 
-TIME_ZONE = 'America/Sao_Paulo';
+TIME_ZONE = env('TIME_ZONE')
 
 USE_I18N = True
 
@@ -139,4 +139,5 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000

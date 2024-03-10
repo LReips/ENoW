@@ -9,7 +9,8 @@ from coleta.models import (Projeto, PalavraChave)
 @login_required(login_url='/admin/login')
 def index(request):
   context = {
-    'projetos': Projeto.objects.all()
+    'projetos': Projeto.objects.all(),
+    'idioma': settings.LANGUAGE_CODE
   }
   return render(request, 'coleta/index.html', context)
 

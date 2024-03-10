@@ -128,30 +128,38 @@ $(document).ready(function(){
     fetch(`/processamento/executar_processamento/${processamento.projeto_id}`, conf)
     .then(response => {
       if (!response.ok) {
-        console.log(response)
-        throw new Error("Um erro aconteceu executar o processamento!")
+        try{
+          return response.json()
+        } catch(e) {
+          throw new Error("Um erro aconteceu executar o processamento!")
+        }
       } else {
         return response.json()
       }
     })
     .then(data => {
-      processamento.id = data.resultados.id_processamento
-      input_id_processamento.val(processamento.id)
-      input_id_processamento.attr("disabled", true)
-      btn_carregar_processamento.attr("disabled", true)
 
-      montar_classificacoes(data.classificacoes)
-      montar_resultado_atual(data.resultados)
+      if (data.erro) {
+        aviso(false, data.erro)
+      } else {
+        processamento.id = data.resultados.id_processamento
+        input_id_processamento.val(processamento.id)
+        input_id_processamento.attr("disabled", true)
+        btn_carregar_processamento.attr("disabled", true)
 
-      let msg = 
-        `<b>Processamento finalizado</b><br>
-         Inicio: ${data.tempo.inicio}<br>
-         Fim: ${data.tempo.fim}<br>
-         Tempo (minutos): ${data.tempo.diff_minutos}<br>
-         Tempo (segundos): ${data.tempo.diff_segundos}`
+        montar_classificacoes(data.classificacoes)
+        montar_resultado_atual(data.resultados)
 
-      aviso(true, msg)
-      toggle_botoes(true)
+        let msg = 
+          `<b>Processamento finalizado</b><br>
+          Inicio: ${data.tempo.inicio}<br>
+          Fim: ${data.tempo.fim}<br>
+          Tempo (minutos): ${data.tempo.diff_minutos}<br>
+          Tempo (segundos): ${data.tempo.diff_segundos}`
+
+        aviso(true, msg)
+        toggle_botoes(true)
+      }
 
     })
     .catch((error) => {
@@ -170,7 +178,7 @@ $(document).ready(function(){
             <div class="col-6"> <b>Acurácia: ${modelo.acuracia}</b> </div>
             <div class="col-6"> <b>Precisão: ${modelo.precisao}</b> </div>
             <div class="col-6"> <b>Recall: ${modelo.recall}</b> </div>
-            <div class="col-6"> <b>Recall: ${modelo.f1_score}</b> </div>
+            <div class="col-6"> <b>F1-Score: ${modelo.f1_score}</b> </div>
             ` + 
              ((montar_matriz)? 
              `<button class="btn btn-secondary ver_matriz" value=${modelo.imagem}>Ver matriz</button>`:

@@ -9,6 +9,7 @@ $(document).ready(function(){
     pageLength: 10,
   });
 
+  const csrf_token = $("#csrf_token").val()
   const projeto_id = $("#projeto_id").val()
   const tabela_noticias_processadas = new DataTable("#tabela_noticias_processadas",{fixedHeader: true})
   const tabela_noticias_duplicadas = new DataTable("#tabela_noticias_duplicadas",{fixedHeader: true})
@@ -35,6 +36,10 @@ $(document).ready(function(){
     if (ok) {
       modal_alertavel.find(".modal-title").text("Aviso")
       modal_alertavel.find(".modal-header").removeClass('alert alert-danger').addClass("alert alert-success")
+
+      modal_alertavel.on('hidden.bs.modal', function (e) {
+        window.location.reload()
+      })
     } else {
       modal_alertavel.find(".modal-title").text("Erro")
       modal_alertavel.find(".modal-header").removeClass('alert alert-success').addClass("alert alert-danger")

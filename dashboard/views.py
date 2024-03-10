@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
@@ -15,7 +16,8 @@ def projeto_view(request, projeto_id):
   context = {
     "projeto": projeto,
     "chaves": chaves,
-    "noticias_processadas": noticias_processadas
+    "noticias_processadas": noticias_processadas,
+    'idioma': settings.LANGUAGE_CODE
   }
   return render(request, 'dashboard/projeto.html', context)
 
@@ -24,6 +26,7 @@ def processamento_view(request, projeto_id):
   projeto = Projeto.objects.get(pk=projeto_id)
   context = {
     "projeto": projeto,
-    "noticias": ConteudoNoticia.objects.filter(projeto=projeto)
+    "noticias": ConteudoNoticia.objects.filter(projeto=projeto),
+    'idioma': settings.LANGUAGE_CODE
   }
   return render(request, 'dashboard/processamento.html', context)

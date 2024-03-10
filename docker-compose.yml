@@ -1,0 +1,24 @@
+version: '3.9'
+
+services:
+  db:
+    image: mysql
+    restart: "always"
+    ports:
+      - "127.0.0.1:3307:3307"
+    expose:
+      - 3307
+    env_file:
+      - .env
+  web:
+    build: .
+    restart: "always"
+    command: bash -c "python3 manage.py migrate && python3 manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    env_file:
+      - .env
