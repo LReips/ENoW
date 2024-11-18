@@ -320,6 +320,8 @@ class Coleta:
 
       for palavra_chave in palavras_chaves:
         self.palavra_chave_atual = palavra_chave
+        #self.palavra_chave_atual.palavra_chave = self.palavra_chave_atual.palavra_chave.strip().replace(' ','+')
+        #self.palavra_chave_atual = palavra_chave.strip().replace('','+')
 
         try:
           print("Coletando: " + self.site_atual.nome + " | " + palavra_chave.palavra_chave)

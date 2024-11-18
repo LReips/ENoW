@@ -45,9 +45,7 @@ from coleta.traducoes import traduzir
 from .models import *
 
 #Separado por projeto
-ROTULOS_NOTICIAS = { 
-  '1': {'1': 1, '2': 0, '3': 1, '4': 0, '5': 0, '6': 0, '7': 1, '8': 0, '9': 1, '10': 0, '11': 0, '12': 0, '13': 0, '14': 0, '15': 0, '16': 0, '17': 0, '18': 1, '19': 0, '20': 0, '21': 1, '22': 1, '23': 1, '24': 1, '25': 1, '26': 1, '27': 0, '28': 0, '29': 0, '30': 0, '31': 0, '32': 0, '33': 0, '34': 0, '35': 0, '36': 0, '37': 0, '38': 0, '39': 0, '40': 0, '41': 0, '42': 0, '43': 0, '44': 0, '45': 0, '46': 0, '47': 0, '48': 0, '49': 0, '50': 0, '51': 0, '52': 0, '53': 0, '54': 0, '55': 0, '56': 0, '57': 0, '58': 0, '59': 0, '60': 0, '61': 0, '62': 0, '63': 0, '64': 0, '65': 0, '66': 1, '67': 0, '68': 0, '69': 0, '70': 0, '71': 0, '72': 0, '73': 0, '74': 0, '75': 0, '76': 0, '77': 1, '78': 0, '79': 0, '80': 1, '81': 0, '82': 0, '83': 0, '84': 0, '85': 0, '86': 0, '87': 0, '88': 1, '89': 0, '90': 0, '91': 1, '92': 1, '93': 1, '94': 1, '95': 1, '96': 1, '97': 1, '98': 0, '99': 1, '100': 1}
-}
+ROTULOS_NOTICIAS = {}
 
 class Temporizador:
   def __init__(self):
@@ -464,27 +462,12 @@ class ProcessamentoSrv:
 
     #Fazendo a limpeza da lista com todas as noticias, rotulando e pontuando------------------------------
     dados_limpos_todas_noticias = []
-    rotulos_reais_todas_noticias = []
+    dados_limpos_noticias_parciais = []
+    rotulos_reais_noticias = []
+    rotulos_indicados = {}
     classificacoes = []
 
     t1 = Temporizador()
-
-    for idx, noticia in enumerate(noticias):
-      texto_limpo = classificador.ajustar_texto(
-        noticia.titulo + ' ' + classificador.noneToStr(noticia.descricao) + ' ' + classificador.noneToStr(noticia.conteudo)
-      )
-
-      rotulo = 'SEM RÓTULO'
-      if str(noticia.id) in rotulos_projeto:
-        rotulo = 'REAL' if rotulos_projeto[str(noticia.id)] else 'FALSA'
-
-      rotulos_reais_todas_noticias.append( 1 if rotulo == 'REAL' else 0 )
-      dados_limpos_todas_noticias.append(texto_limpo)
-
-      classificacoes.append({
-        'id': noticia.id, 'titulo': noticia.titulo, 'site': noticia.site.nome, 'url': noticia.url,
-        'rotulo': rotulo, 'classificacao': '', 'idx_noticias': idx, 'pontuacao': '', 'modelos': ''
-      })
 
     #Limpando o texto das noticias de referencias
     dados_reais_treino = []
@@ -495,12 +478,38 @@ class ProcessamentoSrv:
         noticia.titulo + ' ' + classificador.noneToStr(noticia.descricao) + ' ' + classificador.noneToStr(noticia.conteudo)
       )
       dados_reais_treino.append(texto_limpo)
+      rotulos_indicados[str(noticia.id)] = 1
       
     for noticia in noticias_falsas_ref:
       texto_limpo = classificador.ajustar_texto(
         noticia.titulo + ' ' + classificador.noneToStr(noticia.descricao) + ' ' + classificador.noneToStr(noticia.conteudo)
       )
       dados_falsos_treino.append(texto_limpo)
+      rotulos_indicados[str(noticia.id)] = 0
+
+    usar_noticias_parciais = len(noticias) != len(rotulos_projeto)
+    for idx, noticia in enumerate(noticias):
+      texto_limpo = classificador.ajustar_texto(
+        noticia.titulo + ' ' + classificador.noneToStr(noticia.descricao) + ' ' + classificador.noneToStr(noticia.conteudo)
+      )
+
+      rotulo = 'SEM RÓTULO'
+      if str(noticia.id) in rotulos_projeto:
+        rotulo = 'REAL' if rotulos_projeto[str(noticia.id)] else 'FALSA'
+        rotulos_reais_noticias.append( 1 if rotulo == 'REAL' else 0 )
+      elif str(noticia.id) in rotulos_indicados:
+        rotulo = 'REAL' if rotulos_indicados[str(noticia.id)] else 'FALSA'
+        rotulos_reais_noticias.append( 1 if rotulo == 'REAL' else 0 )
+
+      if rotulo != 'SEM RÓTULO' and usar_noticias_parciais:
+        dados_limpos_noticias_parciais.append(texto_limpo)
+      
+      dados_limpos_todas_noticias.append(texto_limpo)
+
+      classificacoes.append({
+        'id': noticia.id, 'titulo': noticia.titulo, 'site': noticia.site.nome, 'url': noticia.url,
+        'rotulo': rotulo, 'classificacao': '', 'idx_noticias': idx, 'pontuacao': '', 'modelos': ''
+      })
     
     print("Limpeza:", t1.finalizar())
 
@@ -514,27 +523,30 @@ class ProcessamentoSrv:
     t1 = Temporizador()
 
     #Conferir se ja existe o resultado de aprendizado de maquina para este projeto com este numero de noticias
-    salvar_metricas_reais = False
-    dados_teste = {'texto': dados_limpos_todas_noticias, 'label': rotulos_reais_todas_noticias}
-
-    modelos_metricas_reais = ClassificacaoModelo.objects.filter(projeto=self.projeto, qtd_noticias=len(noticias))
-
-    if (len(modelos_metricas_reais) == 0):
-      salvar_metricas_reais = True
-      #Se não existir aprendizado de maquinas para este projeto com este numero de noticias então deve-se fazer um novo
-      resultados['modelos_metricas_reais'] = classificador.executar_classificacao_modelos(dados_teste)
+    if usar_noticias_parciais:
+      dados_teste = {'texto': dados_limpos_noticias_parciais, 'label': rotulos_reais_noticias}
     else:
-      resultados['modelos_metricas_reais'] = []
-      for m in modelos_metricas_reais:
-        resultados['modelos_metricas_reais'].append({
-        "modelo": m.modelo,
-        "acuracia": f"{m.acuracia}",
-        "precisao": f"{m.precisao}",
-        "recall": f"{m.recall}",
-        "f1_score": f"{m.f1_score}",
-        "imagem": m.matriz_confusao
-      })
-    
+      dados_teste = {'texto': dados_limpos_todas_noticias, 'label': rotulos_reais_noticias}
+
+    #modelos_metricas_reais = ClassificacaoModelo.objects.filter(projeto=self.projeto, qtd_noticias=len(noticias))
+#
+    #salvar_metricas_reais = False
+    #if (len(modelos_metricas_reais) == 0):
+    #  salvar_metricas_reais = True
+    #  #Se não existir aprendizado de maquinas para este projeto com este numero de noticias então deve-se fazer um novo
+    #  resultados['modelos_metricas_reais'] = classificador.executar_classificacao_modelos(dados_teste)
+    #else:
+    #  resultados['modelos_metricas_reais'] = []
+    #  for m in modelos_metricas_reais:
+    #    resultados['modelos_metricas_reais'].append({
+    #    "modelo": m.modelo,
+    #    "acuracia": f"{m.acuracia}",
+    #    "precisao": f"{m.precisao}",
+    #    "recall": f"{m.recall}",
+    #    "f1_score": f"{m.f1_score}",
+    #    "imagem": m.matriz_confusao
+    #  })
+    resultados['modelos_metricas_reais'] = []
   
     print("Modelos com rotulos reais:", t1.finalizar())
 
@@ -547,6 +559,8 @@ class ProcessamentoSrv:
     
     print("Modelos com noticias de treino:", t1.finalizar())
 
+    print(rotulos_calculados)
+
     #Retornando o resultado de cada rotulo para cada noticia
     for idx, rotulo in enumerate(rotulos_calculados):
       classificacoes[idx]['pontuacao_real'] = round(pontuacoes[idx]['real'],n_decimais)
@@ -555,13 +569,17 @@ class ProcessamentoSrv:
 
       modelos_string = ''
       for modelo in modelos_nomes:
-        status = modelos_metricas_calculadas[modelo][idx]#'Real' if modelos_metricas_calculadas[modelo][idx] == 1 else 'Falsa'
-        modelos_string = modelos_string + '{}: {}<br>'.format(modelo, status)
+        if modelo in modelos_metricas_calculadas:
+          if idx in modelos_metricas_calculadas[modelo]:
+            status = modelos_metricas_calculadas[modelo][idx]#'Real' if modelos_metricas_calculadas[modelo][idx] == 1 else 'Falsa'
+            modelos_string = modelos_string + '{}: {}<br>'.format(modelo, status)
       classificacoes[idx]['classificadores'] = modelos_string
+
+    print("---FIM enumerate(rotulos_calculados) ---")
 
     #Calculando % de similaridade entre rotulos reais e rotulos calculados
     #print("CALCULANDO METRICAS DE ROTULOS REAIS X CALCULADOS------------")
-    acuracia, precisao, recall, f1_score, vp_calc, vn_calc, fp_calc, fn_calc = calcular_totais(rotulos_reais_todas_noticias, rotulos_calculados)
+    acuracia, precisao, recall, f1_score, vp_calc, vn_calc, fp_calc, fn_calc = calcular_totais(rotulos_reais_noticias, rotulos_calculados)
     
     resultados['acuracia'] = str(acuracia)
     resultados['precisao'] = str(precisao)
@@ -570,7 +588,7 @@ class ProcessamentoSrv:
 
     resultados['modelos_rotulos_calculados'] = []
     for modelo in modelos_metricas_calculadas:
-      acuracia, precisao, recall, f1_score, vp, vn, fp, fn = calcular_totais(rotulos_reais_todas_noticias, modelos_metricas_calculadas[modelo])
+      acuracia, precisao, recall, f1_score, vp, vn, fp, fn = calcular_totais(rotulos_reais_noticias, modelos_metricas_calculadas[modelo])
 
       resultados['modelos_rotulos_calculados'].append({
         "modelo": modelo,
@@ -652,18 +670,18 @@ class ProcessamentoSrv:
         obj_modelo.qtd_noticias = len(noticias)
         obj_modelo.save()
 
-      if salvar_metricas_reais:
-        for modelo in resultados['modelos_metricas_reais']:
-          obj_modelo = ClassificacaoModelo()
-          obj_modelo.projeto = self.projeto
-          obj_modelo.modelo = modelo['modelo']
-          obj_modelo.acuracia = modelo['acuracia']
-          obj_modelo.precisao = modelo['precisao']
-          obj_modelo.recall = modelo['recall']
-          obj_modelo.f1_score = modelo['f1_score']
-          obj_modelo.qtd_noticias = len(noticias)
-          obj_modelo.matriz_confusao = modelo['imagem']
-          obj_modelo.save()
+      #if salvar_metricas_reais:
+      #  for modelo in resultados['modelos_metricas_reais']:
+      #    obj_modelo = ClassificacaoModelo()
+      #    obj_modelo.projeto = self.projeto
+      #    obj_modelo.modelo = modelo['modelo']
+      #    obj_modelo.acuracia = modelo['acuracia']
+      #    obj_modelo.precisao = modelo['precisao']
+      #    obj_modelo.recall = modelo['recall']
+      #    obj_modelo.f1_score = modelo['f1_score']
+      #    obj_modelo.qtd_noticias = len(noticias)
+      #    obj_modelo.matriz_confusao = modelo['imagem']
+      #    obj_modelo.save()
 
     return resultados, classificacoes
 
