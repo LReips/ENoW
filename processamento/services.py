@@ -250,7 +250,7 @@ class Classificador:
     reais_tfidf = tf_idf.fit_transform(dados_reais['texto'])
     nao_reais_tfidf = tf_idf.fit_transform(dados_nao_reais['texto'])
 
-    #Calculando o coseno e pegando apenas os dados adicionais (demais noticias)
+    #Calculando o cosseno e pegando apenas os dados adicionais (demais noticias)
     reais = cosine_similarity(reais_tfidf)[idx_ult_real:]
     nao_reais = cosine_similarity(nao_reais_tfidf)[idx_ult_nao_real:]
 
@@ -260,7 +260,7 @@ class Classificador:
       real_coseno = 0
       nao_real_coseno = 0
       
-      #para cada noticia buscar o coseno calculado de cada noticia de referencia
+      #para cada noticia buscar o cosseno calculado de cada noticia de referencia
       for r in reais[i][:idx_ult_real]:
         if r >= real_coseno:
           real_coseno = r
@@ -454,6 +454,7 @@ class ProcessamentoSrv:
     #Buscando todas as noticias do projeto
     noticias = ConteudoNoticia.objects.select_related().filter(projeto=self.projeto)
 
+  
     #Buscando as noticias de referencia
     noticias_reais_ref = ConteudoNoticia.objects.select_related().filter(projeto=self.projeto, pk__in=noticias_reais_id)
 
@@ -699,6 +700,52 @@ class ProcessamentoSrv:
       }, 200
     except Exception as e:
       return {"erro": str(e)}, 400
+    
+  def teste(self):
+    noticias = ConteudoNoticia.objects.select_related().all()[:1000]
+    grupo1 = []
+    grupo2 = []
+    grupo3 = []
+
+    for noticia in noticias:
+      grupo1.append({
+        "titulo": noticia.titulo,
+        "resumo": noticia.descricao
+    })
+      
+      grupo2.append({
+        "titulo": noticia.titulo,
+        "corpo": noticia.conteudo
+    })
+      
+      grupo3.append({
+        "titulo": noticia.titulo,
+        "resumo": noticia.descricao,
+        "corpo": noticia.conteudo
+    })
+
+    print("Grupo 1: Título e Descricao")
+    for noticia in grupo1[:5]:
+        print(f"Título: {noticia['titulo']}")
+        print(f"Resumo: {noticia['resumo'] or 'Resumo não disponível'}")
+        print("-" * 50)
+    
+    print(len(noticias))
+    
+    print("\nGrupo 2: Título e Conteudo")
+    for noticia in grupo2[:5]:
+        print(f"Título: {noticia['titulo']}")
+        print(f"Corpo: {noticia['corpo'] or 'Corpo não disponível'}")
+        print("-" * 50)
+
+    print("\nGrupo 3: Título, Descricao e Conteudo")
+    for noticia in grupo3[:5]:
+        print(f"Título: {noticia['titulo']}")
+        print(f"Resumo: {noticia['resumo'] or 'Resumo não disponível'}")
+        print(f"Corpo: {noticia['corpo'] or 'Corpo não disponível'}")
+        print("-" * 50)
+    
+    return {"grupo1": grupo1, "grupo2": grupo2, "grupo3": grupo3}
 
 class CsvSbertSrv():
   csv_f = None

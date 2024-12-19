@@ -29,12 +29,20 @@ $(document).ready(function() {
       }
     })
     .then(data => {
+      let sites_erros = ''
+      if (data.sites_erros.length != 0) {
+        sites_erros = 'The following sites may have change their HTML structure, please verify it: <br>' + data.sites_erros.join(',')
+      }
+      
       let msg = 
         `Execution completed!<br>
          Start time: ${data.tempo.inicio}<br>
          End time: ${data.tempo.fim}<br>
          Time (minutes): ${data.tempo.diff_minutos}<br>
-         Time (seconds): ${data.tempo.diff_segundos}`
+         Time (seconds): ${data.tempo.diff_segundos}
+         <br>
+         <br>
+         ${sites_erros}}`
       aviso(true, msg, projeto)
     })
     .catch((error) => {

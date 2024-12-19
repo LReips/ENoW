@@ -65,3 +65,10 @@ def download_view(request):
   except Exception as e:
     return JsonResponse({"erro":str(e)}, safe=False, status=400)
   
+@require_http_methods(["GET"])
+def teste_view(request):
+  obj = ProcessamentoSrv()
+  restorno = obj.teste()
+
+  return JsonResponse(restorno , safe=False, status=200)
+  

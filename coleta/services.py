@@ -27,9 +27,13 @@ class Coleta:
   palavra_chave_atual = None
   temp_site_url_atual = ""
 
+  teste_site = None
+  sites_erros = []
+
   def __init__(self, projeto, palavra_chave_user):
     self.projeto = projeto
     self.palavra_chave_user = palavra_chave_user
+    self.teste_site = TesteSite()
 
   def temporizador(self):
     if self.t_ini is None:
@@ -304,10 +308,36 @@ class Coleta:
     conteudo_site = BeautifulSoup(response.content, 'html.parser')
     self.coletar_noticias_site(conteudo_site)
 
+  def conferir_site(self):
+    palavra_teste = 'carro'
+    ok = False
+
+    self.teste_site.projeto = self.projeto
+    self.teste_site.site_atual = self.site_atual
+
+    try:
+      print("Testando coleta: " + self.site_atual.nome + " | " + palavra_teste)
+      
+      if self.site_atual.tipo_paginacao == 'elemento_html':
+        ok = self.teste_site.paginacao_elemento_html(palavra_teste)
+      elif self.site_atual.tipo_paginacao == 'url_backend':
+        ok = self.teste_site.paginacao_url_backend(palavra_teste)
+      elif self.site_atual.tipo_paginacao == 'url':
+        ok = self.teste_site.paginacao_url(palavra_teste)
+      else:
+        ok = self.teste_site.sem_paginacao(palavra_teste)
+    except Exception as e:
+      print(e)
+      print("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB")
+
+    if ok is False:
+      self.sites_erros.append(self.site_atual.nome)
+
   def executar(self):
     resultado = True
     #Resgatando os sites vinculados ao projeto 
     sites = self.projeto.sites.all()
+    self.sites_erros = []
 
     #Resgatando as palavras_chaves vinculadas ao projeto (caso uma tenha sido fornecida, utilizar apenas ela)
     if self.palavra_chave_user is None:
@@ -318,10 +348,11 @@ class Coleta:
     for site in sites:
       self.site_atual = site
 
+      self.conferir_site()
+
       for palavra_chave in palavras_chaves:
         self.palavra_chave_atual = palavra_chave
-        #self.palavra_chave_atual.palavra_chave = self.palavra_chave_atual.palavra_chave.strip().replace(' ','+')
-        #self.palavra_chave_atual = palavra_chave.strip().replace('','+')
+        self.palavra_chave_atual.palavra_chave = self.palavra_chave_atual.palavra_chave.strip().replace(' ','+')
 
         try:
           print("Coletando: " + self.site_atual.nome + " | " + palavra_chave.palavra_chave)
@@ -339,6 +370,213 @@ class Coleta:
       
     self.deletar_pasta_imagens_vazias()
     return resultado
+
+class TesteSite():
+  site_atual = None
+  projeto = None
+
+  def converter_json(self, json_string):
+    try:
+      return json.loads(json_string)
+    except ValueError as e:
+      return False
+
+  def processar_noticia(self, noticia_obj, noticia, estrutura):
+    campo = str(estrutura.campo.tipo).lower()
+    possui_caminho = str(estrutura.caminho) == '' or estrutura.caminho is None
+
+    dado_coletado = None
+    if (possui_caminho):
+      dado_coletado = noticia.find(str(estrutura.tag))
+    else:
+      dado_coletado = noticia.find(str(estrutura.tag), attrs={str(estrutura.caminho)})
+
+    if dado_coletado is not None and estrutura.subtag != '' and estrutura.subtag is not None:
+      if (str(estrutura.subtag_caminho) == '' or estrutura.subtag_caminho is None):
+        dado_coletado = dado_coletado.find(str(estrutura.subtag))
+      else:
+        dado_coletado = dado_coletado.find(str(estrutura.subtag), attrs={str(estrutura.subtag_caminho)})
+
+    if(campo == 'titulo'):
+      if dado_coletado is not None:
+        noticia_obj.noticia.titulo = dado_coletado.text.strip()
+    elif(campo == 'url'):
+      if dado_coletado is not None:
+        noticia_obj.noticia.url = dado_coletado['href']
+
+        if noticia_obj.noticia.url != "":
+          if noticia_obj.noticia.url.startswith("/"):
+            noticia_obj.noticia.url = self.site_atual.url.split('.br')[0] + '.br' + noticia_obj.noticia.url
+    elif(campo == 'data_formatada'):
+      if dado_coletado is not None:
+        noticia_obj.noticia.data_formatada = dado_coletado.text.strip()
+    elif(campo == 'descricao'):
+      if dado_coletado is not None:
+        noticia_obj.noticia.descricao = dado_coletado.text.strip()
+    elif(campo == 'dia'):
+      if dado_coletado is not None:
+        noticia_obj.noticia.dia = dado_coletado.text.strip()
+    elif(campo == 'mes'):
+      if dado_coletado is not None:
+        noticia_obj.noticia.mes = dado_coletado.text.strip()
+    elif(campo == 'ano'):
+      if dado_coletado is not None:
+        noticia_obj.noticia.ano = dado_coletado.text.strip()
+    elif(campo == 'localizacao'):
+      if dado_coletado is not None:
+        noticia_obj.noticia.localizacao = dado_coletado.text.strip()
+    elif(campo == 'imagem'):
+      if(dado_coletado):
+        noticia_obj.salvar_imagem(dado_coletado)
+
+  def coletar_noticias_site(self, conteudo_site):
+    #Buscando a estrutura da lista de noticias
+    init_estruturas = InitEstruturaNoticia.objects.filter(site=self.site_atual)
+    for init_estrutura in init_estruturas:
+
+      #Buscando as noticias
+      if init_estrutura.caminho is None:
+        lista_noticias = conteudo_site.findAll(str(init_estrutura.tag))
+      else:
+        lista_noticias = conteudo_site.findAll(str(init_estrutura.tag), attrs={str(init_estrutura.caminho)})
+
+      #Buscando as estruturas de noticias (titulo, descricao) da lista de noticia
+      lista_estruturas = EstruturaNoticia.objects.filter(inicio_estrutura_noticia=init_estrutura)
+      if len(lista_noticias) == 0 or lista_noticias is None:
+        return False
+      
+      for noticia in lista_noticias:
+
+        #Objeto que reterá os dados da noticia
+        noticia_obj = NoticiaColeta(
+          id_coleta=1, projeto=self.projeto, 
+          site=self.site_atual, init_estrutura=init_estrutura,
+          palavra_chave = 'XXXX'
+        )
+
+        #Com a noticia encontrada, puxar os dados de titulo, decricao, url, imagem para salvar
+        for lst_estrutura in lista_estruturas:
+          self.processar_noticia(noticia_obj, noticia, lst_estrutura)
+
+        if noticia_obj.noticia.titulo == '' or noticia_obj.noticia.titulo is None:
+          return False
+        
+        #Acessando a pagina da noticia
+        if noticia_obj.noticia.url != "" and self.site_atual.acessar_pagina_interna == 'S':
+          try:
+            article = Article(noticia_obj.noticia.url, language="pt")
+            article.download()
+            article.parse()
+            noticia_obj.noticia.conteudo = article.text
+            if article.publish_date is not None or article.publish_date != "" and noticia_obj.noticia.data_formatada is None:
+              noticia_obj.noticia.data_formatada = article.publish_date
+
+            if noticia_obj.noticia.descricao is None or noticia_obj.noticia.descricao == '':
+              noticia_obj.noticia.descricao = article.summary
+
+          except:
+            return False
+    return True
+
+  def paginacao_elemento_html(self, palavra_chave):
+    res = False
+
+    temp_site_url = self.site_atual.url.format(palavra_chave = palavra_chave)
+    json_args = json.loads(self.site_atual.json_args)
+
+    #Requisitando o html do site
+    response = requests.get(str(temp_site_url), headers={"User-Agent": "XY"})
+
+    #Verificando se o site não respondeu a requisição corretamente
+    if int(response.status_code) in range(400,599):
+      return False
+    
+    #Convertando o html para objeto manipulavel
+    conteudo_site = BeautifulSoup(response.content, 'html.parser')
+    if self.coletar_noticias_site(conteudo_site):
+      res = True
+    
+    #Pegando a proxima url baseado na paginação
+    tag_paginacao = conteudo_site.findAll(json_args['tag'], json_args['attr'])
+    if len(tag_paginacao) == 0:
+      res = False
+
+    return res
+
+  def paginacao_url(self, palavra_chave):
+    res = False
+    paginacao = 1
+
+    #print(paginacao)
+    temp_site_url = self.site_atual.url.format(
+      palavra_chave=palavra_chave, pagina = paginacao
+    )
+    
+    #Requisitando o html do site
+    response = requests.get(str(temp_site_url), headers={"User-Agent": "XY"})
+
+    #Verificando se o site não respondeu a requisição corretamente
+    if int(response.status_code) in range(400,599):
+      if paginacao > 1:
+        pass
+      else:
+        res = False
+    
+    #Convertando o html para objeto manipulavel
+    conteudo_site = BeautifulSoup(response.content, 'html.parser')
+    if self.coletar_noticias_site(conteudo_site):
+      res = True
+    return res
+  
+  def paginacao_url_backend(self, palavra_chave):
+    paginacao = 1
+    temp_site_url = self.site_atual.url
+    
+    if (self.site_atual.json_args == '' or self.site_atual.json_args is None):
+      return False
+
+    json_args = json.loads(self.site_atual.json_args)
+    json_args[json_args["parametro_query"]] = palavra_chave
+
+    if "page" in json_args:
+      paginacao = int(json_args["page"])
+
+    if json_args["tipo"] == "POST":
+      json_args[json_args["parametro_pagina"]] = paginacao
+      response = requests.post(str(temp_site_url), data=json_args, headers={"User-Agent": "XY"})
+    else:
+       return False
+
+    if int(response.status_code) in range(400,599) and paginacao > 1:
+      return False
+    elif int(response.status_code) in range(400,599) and paginacao == 1:
+      return False
+    
+    html_raw = response.content
+    resp_json = self.converter_json(response.content) 
+
+    if resp_json is False and paginacao == 1:
+      raise requests.exceptions.RequestException
+
+    if self.site_atual.req_response != "" and self.site_atual.req_response not in resp_json:
+       return False
+    else:
+      html_raw = resp_json[self.site_atual.req_response]
+
+    conteudo_site = BeautifulSoup(html_raw, 'html.parser')
+    return self.coletar_noticias_site(conteudo_site)
+
+  def sem_paginacao(self, palavra_chave):
+    temp_site_url = self.site_atual.url.format(palavra_chave = palavra_chave)
+    response = requests.get(str(temp_site_url), headers={"User-Agent": "XY"})
+
+    #Verificando se o site não respondeu a requisição corretamente
+    if int(response.status_code) in range(400,599):
+      return False
+    
+    #Convertando o html para objeto manipulavel
+    conteudo_site = BeautifulSoup(response.content, 'html.parser')
+    return self.coletar_noticias_site(conteudo_site)
 
 class NoticiaColeta:
   noticia = None

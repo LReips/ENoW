@@ -29,12 +29,21 @@ $(document).ready(function() {
       }
     })
     .then(data => {
+
+      let sites_erros = ''
+      if (data.sites_erros.length != 0) {
+        sites_erros = 'Os seguintes sites podem ter alterado sua estrutura HTML, favor verificar: <br>' + data.sites_erros.join(', ')
+      }
+
       let msg = 
         `Coleta finalizada!<br>
          Inicio: ${data.tempo.inicio}<br>
          Fim: ${data.tempo.fim}<br>
          Tempo (minutos): ${data.tempo.diff_minutos}<br>
-         Tempo (segundos): ${data.tempo.diff_segundos}`
+         Tempo (segundos): ${data.tempo.diff_segundos}
+         <br>
+         <br>
+         ${sites_erros}`
       aviso(true, msg, projeto)
     })
     .catch((error) => {
